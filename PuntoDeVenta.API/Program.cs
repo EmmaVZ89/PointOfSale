@@ -152,7 +152,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "PuntoDeVenta API v1");
-        options.RoutePrefix = string.Empty; // Swagger en la raiz
+        options.RoutePrefix = "swagger"; // Swagger en /swagger
     });
 }
 
