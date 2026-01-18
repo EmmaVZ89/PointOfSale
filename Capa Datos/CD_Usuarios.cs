@@ -69,7 +69,7 @@ namespace Capa_Datos
                 this.capaEntidadUsuarios.Dni = Convert.ToInt32(row["DNI"]);
                 this.capaEntidadUsuarios.Cuit = Convert.ToDouble(row["CUIT"]);
                 this.capaEntidadUsuarios.Correo = Convert.ToString(row["Correo"]);
-                this.capaEntidadUsuarios.Telefono = Convert.ToInt32(row["Telefono"]);
+                this.capaEntidadUsuarios.Telefono = Convert.ToString(row["Telefono"]);
                 this.capaEntidadUsuarios.Fecha_Nac = Convert.ToDateTime(row["Fecha_Nac"]);
                 this.capaEntidadUsuarios.Privilegio = Convert.ToInt32(row["Privilegio"]);
                 this.capaEntidadUsuarios.Img = row["img"] != DBNull.Value ? (byte[])row["img"] : null;

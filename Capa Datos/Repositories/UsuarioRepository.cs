@@ -20,14 +20,27 @@ namespace Capa_Datos.Repositories
 
         public async Task<CE_Usuarios> ValidarCredencialesAsync(string usuario, string contrasena)
         {
-            // Nota: La contrasena deberia estar hasheada en la BD
-            // y compararse de forma segura (ej: BCrypt)
-            return await _dbSet
+            // La BD usa pgcrypto para encriptar passwords.
+            // El Patron del usuario se usa como clave de encriptacion.
+            // Primero buscamos el usuario para obtener su Patron
+            var user = await _dbSet
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u =>
-                    u.Usuario == usuario &&
-                    u.Contrasenia == contrasena &&
-                    u.Activo);
+                .FirstOrDefaultAsync(u => u.Usuario == usuario && u.Activo);
+
+            if (user == null || string.IsNullOrEmpty(user.Patron))
+                return null;
+
+            // Validamos usando pgp_sym_decrypt con raw SQL
+            var sql = @"SELECT COUNT(*)::int AS ""Value"" FROM ""Usuarios""
+                       WHERE ""usuario"" = {0}
+                       AND pgp_sym_decrypt(""contrasenia"", {1}) = {2}
+                       AND ""Activo"" = true";
+
+            var count = await _context.Database
+                .SqlQueryRaw<int>(sql, usuario, user.Patron, contrasena)
+                .FirstOrDefaultAsync();
+
+            return count > 0 ? user : null;
         }
 
         public async Task<CE_Usuarios> ValidarPatronAsync(string patron)

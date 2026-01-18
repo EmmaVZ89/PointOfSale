@@ -71,20 +71,6 @@ PuntoDeVenta/
 - Graficos con LiveCharts
 - Estadisticas en tiempo real
 
-## Capturas de Pantalla
-
-<p align="center">
-  <img width="250" src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/login.png" alt="Login">
-</p>
-
-<p align="center">
-  <img width="70%" src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/dashboard.png" alt="Dashboard">
-</p>
-
-<p align="center">
-  <img width="70%" src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/venta.png" alt="POS">
-</p>
-
 ## Requisitos
 
 - .NET 8 SDK
@@ -110,11 +96,11 @@ cp appsettings.example.json appsettings.json
 # Cliente WPF
 dotnet run --project PuntoDeVenta/Capa\ Presentacion.csproj
 
-# API (cuando este disponible)
+# API REST (Swagger en http://localhost:5207/swagger)
 dotnet run --project PuntoDeVenta.API/PuntoDeVenta.API.csproj
 ```
 
-## API Endpoints (Proximamente)
+## API Endpoints
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -132,13 +118,13 @@ dotnet run --project PuntoDeVenta.API/PuntoDeVenta.API.csproj
 
 - [Fase 1: Seguridad y Configuracion](docs/Fase1_TecnologiasNuevas.md)
 - [Fase 2: Entity Framework Core y Patrones](docs/Fase2_TecnologiasNuevas.md)
-- [Fase 3: API REST y JWT](docs/Fase3_TecnologiasNuevas.md) (proximamente)
+- [Fase 3: API REST y JWT](docs/Fase3_TecnologiasNuevas.md)
 
 ## Roadmap
 
 - [x] Fase 1: Seguridad (configuracion externa, .gitignore)
 - [x] Fase 2: Migracion a .NET 8 + Entity Framework Core
-- [ ] Fase 3: API REST con JWT
+- [x] Fase 3: API REST con JWT Authentication
 - [ ] Fase 4: Frontend Web (Blazor)
 - [ ] Fase 5: Testing y DevOps
 

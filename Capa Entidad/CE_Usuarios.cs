@@ -14,7 +14,7 @@ namespace Capa_Entidad
         private int dni;
         private int cuit;
         private string correo;
-        private int telefono;
+        private string telefono;
         private DateTime fecha_Nac;
         private int privilegio;
         private byte[] img;
@@ -29,7 +29,7 @@ namespace Capa_Entidad
         public int Dni { get => dni; set => dni = value; }
         public double Cuit { get => cuit; set => cuit = (int)value; } // Ajuste menor: CUIT en BD es float, aqui int. Mantengo int pero ojo.
         public string Correo { get => correo; set => correo = value; }
-        public int Telefono { get => telefono; set => telefono = value; }
+        public string Telefono { get => telefono; set => telefono = value; }
         public DateTime Fecha_Nac { get => fecha_Nac; set => fecha_Nac = value; }
         public int Privilegio { get => privilegio; set => privilegio = value; }
         public byte[] Img { get => img; set => img = value; }

@@ -217,7 +217,7 @@ namespace PuntoDeVenta.API.Controllers
                 if (!string.IsNullOrEmpty(dto.Apellido)) usuario.Apellido = dto.Apellido;
                 if (dto.Dni.HasValue) usuario.Dni = dto.Dni.Value;
                 if (!string.IsNullOrEmpty(dto.Correo)) usuario.Correo = dto.Correo;
-                if (dto.Telefono.HasValue) usuario.Telefono = dto.Telefono.Value;
+                if (!string.IsNullOrEmpty(dto.Telefono)) usuario.Telefono = dto.Telefono;
                 if (dto.FechaNac.HasValue) usuario.Fecha_Nac = dto.FechaNac.Value;
                 if (dto.Privilegio.HasValue) usuario.Privilegio = dto.Privilegio.Value;
                 if (dto.Activo.HasValue) usuario.Activo = dto.Activo.Value;

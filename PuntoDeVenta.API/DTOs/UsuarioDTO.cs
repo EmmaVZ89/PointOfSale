@@ -14,7 +14,7 @@ namespace PuntoDeVenta.API.DTOs
         public string NombreCompleto => $"{Nombre} {Apellido}";
         public int Dni { get; set; }
         public string Correo { get; set; }
-        public int Telefono { get; set; }
+        public string Telefono { get; set; }
         public DateTime FechaNac { get; set; }
         public int Privilegio { get; set; }
         public string PrivilegioNombre => Privilegio == 1 ? "Administrador" : "Usuario";
@@ -42,7 +42,7 @@ namespace PuntoDeVenta.API.DTOs
         [EmailAddress(ErrorMessage = "El correo no es valido")]
         public string Correo { get; set; }
 
-        public int Telefono { get; set; }
+        public string Telefono { get; set; }
 
         public DateTime FechaNac { get; set; }
 
@@ -76,7 +76,7 @@ namespace PuntoDeVenta.API.DTOs
         [EmailAddress]
         public string Correo { get; set; }
 
-        public int? Telefono { get; set; }
+        public string Telefono { get; set; }
 
         public DateTime? FechaNac { get; set; }
 
