@@ -24,9 +24,13 @@
 
     <!-- System.Drawing para .NET Core -->
     <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
+
+    <!-- Dependency Injection -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Capa Datos\Capa Datos.csproj" />
     <ProjectReference Include="..\Capa Entidad\Capa Entidad.csproj" />
     <ProjectReference Include="..\Capa Negocio\Capa Negocio.csproj" />
   </ItemGroup>

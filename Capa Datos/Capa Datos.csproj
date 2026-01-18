@@ -9,8 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Npgsql actualizado para .NET 8 -->
-    <PackageReference Include="Npgsql" Version="8.0.5" />
+    <!-- Entity Framework Core para PostgreSQL -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
