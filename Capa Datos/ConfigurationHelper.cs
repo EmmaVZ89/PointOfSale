@@ -46,6 +46,31 @@ namespace Capa_Datos
         }
 
         /// <summary>
+        /// Obtiene un valor de configuracion por nombre.
+        /// Util para configuraciones dinamicas como JWT.
+        /// </summary>
+        /// <param name="key">Nombre de la configuracion (ej: "JwtKey")</param>
+        /// <returns>Valor de la configuracion o null si no existe</returns>
+        public static string GetAppSetting(string key)
+        {
+            if (_settings == null)
+            {
+                LoadConfiguration();
+            }
+
+            // Buscar en el diccionario de settings adicionales
+            if (_additionalSettings != null && _additionalSettings.TryGetValue(key, out string value))
+            {
+                return value;
+            }
+
+            return null;
+        }
+
+        // Diccionario para settings adicionales (JWT, etc.)
+        private static System.Collections.Generic.Dictionary<string, string> _additionalSettings;
+
+        /// <summary>
         /// Carga la configuracion desde appsettings.json
         /// </summary>
         private static void LoadConfiguration()
@@ -79,6 +104,8 @@ namespace Capa_Datos
 
                     // Leer AppSettings
                     _settings = new AppSettings();
+                    _additionalSettings = new System.Collections.Generic.Dictionary<string, string>();
+
                     if (root.TryGetProperty("AppSettings", out JsonElement appSettings))
                     {
                         if (appSettings.TryGetProperty("Timezone", out JsonElement tz))
@@ -92,6 +119,24 @@ namespace Capa_Datos
                         if (appSettings.TryGetProperty("Version", out JsonElement version))
                         {
                             _settings.Version = version.GetString();
+                        }
+
+                        // Cargar settings adicionales (JWT, etc.)
+                        if (appSettings.TryGetProperty("JwtKey", out JsonElement jwtKey))
+                        {
+                            _additionalSettings["JwtKey"] = jwtKey.GetString();
+                        }
+                        if (appSettings.TryGetProperty("JwtIssuer", out JsonElement jwtIssuer))
+                        {
+                            _additionalSettings["JwtIssuer"] = jwtIssuer.GetString();
+                        }
+                        if (appSettings.TryGetProperty("JwtAudience", out JsonElement jwtAudience))
+                        {
+                            _additionalSettings["JwtAudience"] = jwtAudience.GetString();
+                        }
+                        if (appSettings.TryGetProperty("JwtExpirationMinutes", out JsonElement jwtExp))
+                        {
+                            _additionalSettings["JwtExpirationMinutes"] = jwtExp.GetString();
                         }
                     }
                 }

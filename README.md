@@ -1,67 +1,152 @@
-<h1 align="center">Punto de Venta</h1>
-<br>
-<p>Punto de Venta básico, CRUD de usuarios con imagenes, CRUD de productos con imágenes y generación de ventas</p>
-<p>Lenguaje de Programación: C#</p>
-<p>Patrón de Arquitectura: Programación en N Capas</p>
-<p>Interfaz de usuario: WPF(XAML)
-<p>Lenguaje de consultas: SQL Server
-<br>
-<h2 align="center">Inicio de Sesión</h2>
+# Point of Sale (POS) System
+
+Sistema de Punto de Venta completo para pequenas y medianas empresas, desarrollado con arquitectura moderna y mejores practicas de desarrollo.
+
+## Stack Tecnologico
+
+| Capa | Tecnologia |
+|------|------------|
+| **Frontend Desktop** | WPF (.NET 8) + XAML |
+| **Frontend Web** | Blazor WebAssembly (proximamente) |
+| **Backend API** | ASP.NET Core 8 Web API |
+| **ORM** | Entity Framework Core 8 |
+| **Base de Datos** | PostgreSQL (Neon Cloud) |
+| **Autenticacion** | JWT Bearer Tokens |
+| **Documentacion API** | Swagger / OpenAPI |
+
+## Arquitectura
+
+```
+PuntoDeVenta/
+├── Capa Entidad/          # Modelos de dominio
+├── Capa Datos/            # Acceso a datos (EF Core + Repository Pattern)
+│   ├── Context/           # DbContext
+│   ├── Interfaces/        # Contratos de repositorios
+│   └── Repositories/      # Implementaciones
+├── Capa Negocio/          # Logica de negocio
+├── PuntoDeVenta/          # Cliente WPF
+│   └── Views/             # Vistas XAML
+├── PuntoDeVenta.API/      # API REST
+│   ├── Controllers/       # Endpoints
+│   ├── DTOs/              # Data Transfer Objects
+│   └── Auth/              # JWT Authentication
+└── docs/                  # Documentacion tecnica
+```
+
+## Patrones de Diseno Implementados
+
+- **Repository Pattern**: Abstraccion del acceso a datos
+- **Unit of Work**: Coordinacion de transacciones
+- **Dependency Injection**: Desacoplamiento de dependencias
+- **DTO Pattern**: Transferencia de datos entre capas
+- **Clean Architecture**: Separacion de responsabilidades
+
+## Funcionalidades
+
+### Gestion de Usuarios
+- CRUD completo con imagenes de perfil
+- Autenticacion por usuario/contrasena
+- Autenticacion por patron de desbloqueo
+- Niveles de privilegio (Admin/Usuario)
+
+### Gestion de Productos
+- CRUD con imagenes de producto
+- Categorias/Grupos
+- Control de stock
+- Unidades de medida
+
+### Punto de Venta
+- Carrito de compras
+- Busqueda por codigo de barras
+- Generacion de tickets PDF
+- Generacion de presupuestos
+
+### Inventario
+- Registro de movimientos (entradas/salidas)
+- Historial por producto
+- Ajustes de inventario
+
+### Dashboard
+- Resumen de ventas
+- Graficos con LiveCharts
+- Estadisticas en tiempo real
+
+## Capturas de Pantalla
+
 <p align="center">
-<img  width=250 src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/login.png">
+  <img width="250" src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/login.png" alt="Login">
 </p>
-<h2 align="center">Dashboard</h2>
-<p align="center">En el Dashboard se mostrarán la totalidad de ventas, cantidad de productos totales y un chart donde se reflejan las últimas 10 ventas</p>
+
 <p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/dashboard.png">
+  <img width="70%" src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/dashboard.png" alt="Dashboard">
 </p>
-<h2 align="center">Gestión de Usuarios</h2>
-<p align="center">En esta sección el usuario que tenga privilegios de administrador podrá ver el listado de usuarios, crear, consultar, modificar y eliminar usuarios.</p>
+
 <p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/listaUsuarios.png">
+  <img width="70%" src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/venta.png" alt="POS">
 </p>
-<h2 align="center">Creación de Usuarios</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/crud1.png">
-</p>
-<h2 align="center">Consulta de Usuarios</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/crud2.png">
-</p>
-<h2 align="center">Modificación de Usuarios</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/crud3.png">
-</p>
-<h2 align="center">Eliminación de Usuarios</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/crud4.png">
-</p>
-<h2 align="center">CRUD de Productos</h2>
-<p align="center">En esta sección el usuario que tenga privilegios de administrador podrá ver el listado de productos, crear, consultar, modificar y eliminar productos.</p>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/crudP.png">
-</p>
-<h2 align="center">Creación de Venta</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/venta.png">
-</p>
-<h2 align="center">Generación de PDF</h2>
-<p align="center">
-<img  width=250 src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/ventapdf.png">
-</p>
-<h2 align="center">Cambio de temas</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/gif/temas.gif">
-</p>
-<h2 align="center">Sidebar</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/gif/sidebar.gif">
-</p>
-<h2 align="center">Mi Cuenta</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/gif/mi%20cuenta.gif">
-</p>
-<h2 align="center">Acerca de</h2>
-<p align="center">
-<img  width=70% src="https://github.com/EmmaVZ89/Punto-de-Venta-.NET/blob/main/img/gif/acercade.gif">
-</p>
+
+## Requisitos
+
+- .NET 8 SDK
+- PostgreSQL (o cuenta en Neon.tech)
+- Visual Studio 2022 / VS Code / Rider
+
+## Instalacion
+
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/EmmaVZ89/PointOfSale.git
+cd PointOfSale
+```
+
+2. Configurar la base de datos:
+```bash
+cp appsettings.example.json appsettings.json
+# Editar appsettings.json con tus credenciales de PostgreSQL
+```
+
+3. Compilar y ejecutar:
+```bash
+# Cliente WPF
+dotnet run --project PuntoDeVenta/Capa\ Presentacion.csproj
+
+# API (cuando este disponible)
+dotnet run --project PuntoDeVenta.API/PuntoDeVenta.API.csproj
+```
+
+## API Endpoints (Proximamente)
+
+| Metodo | Endpoint | Descripcion |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Autenticacion |
+| GET | `/api/productos` | Listar productos |
+| GET | `/api/productos/{id}` | Obtener producto |
+| POST | `/api/productos` | Crear producto |
+| PUT | `/api/productos/{id}` | Actualizar producto |
+| DELETE | `/api/productos/{id}` | Eliminar producto |
+| GET | `/api/usuarios` | Listar usuarios |
+| GET | `/api/clientes` | Listar clientes |
+| GET | `/api/movimientos` | Listar movimientos |
+
+## Documentacion
+
+- [Fase 1: Seguridad y Configuracion](docs/Fase1_TecnologiasNuevas.md)
+- [Fase 2: Entity Framework Core y Patrones](docs/Fase2_TecnologiasNuevas.md)
+- [Fase 3: API REST y JWT](docs/Fase3_TecnologiasNuevas.md) (proximamente)
+
+## Roadmap
+
+- [x] Fase 1: Seguridad (configuracion externa, .gitignore)
+- [x] Fase 2: Migracion a .NET 8 + Entity Framework Core
+- [ ] Fase 3: API REST con JWT
+- [ ] Fase 4: Frontend Web (Blazor)
+- [ ] Fase 5: Testing y DevOps
+
+## Licencia
+
+MIT License
+
+## Autor
+
+**Emmanuel Valdez**
+- GitHub: [@EmmaVZ89](https://github.com/EmmaVZ89)
