@@ -1,0 +1,262 @@
+# =============================================================================
+# .gitignore para Proyecto PuntoDeVenta (.NET)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ARCHIVOS DE CLAUDE Y DOCUMENTACION INTERNA
+# -----------------------------------------------------------------------------
+
+# Directivas de Claude (archivo de configuracion del asistente)
+claude.md
+CLAUDE.md
+
+# Documentacion interna de desarrollo
+docs/
+
+# -----------------------------------------------------------------------------
+# ARCHIVOS SENSIBLES - NUNCA SUBIR AL REPOSITORIO
+# -----------------------------------------------------------------------------
+
+# Archivo de configuracion con credenciales reales
+appsettings.json
+
+# Archivos de secretos de usuario (.NET Core)
+secrets.json
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# -----------------------------------------------------------------------------
+# ARCHIVOS DE COMPILACION Y BUILD
+# -----------------------------------------------------------------------------
+
+# Carpetas de salida de compilacion
+bin/
+obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Archivos de compilacion
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.ipch
+
+# Resultados de MSBuild
+*.log
+msbuild.wrappercache
+
+# -----------------------------------------------------------------------------
+# VISUAL STUDIO
+# -----------------------------------------------------------------------------
+
+# Archivos de usuario de Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Archivos generados por Blend
+*.blend
+*.blend1
+
+# Archivos de cache
+*.cache
+**/[Pp]ackages/*
+
+# Excepto los archivos packages.config
+!**/packages.config
+
+# NuGet v3+ usa carpeta global, pero mantener packages locales ignorados
+packages/
+
+# Archivos de publish
+*.publish.xml
+*.azurePubxml
+*.pubxml
+*.pubxml.user
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]roject.lock.json
+**/[Pp]roject.fragment.lock.json
+artifacts/
+
+# StyleCop
+StyleCopReport.xml
+
+# Archivos de build
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Archivos de coverage
+*.coverage
+*.coveragexml
+
+# NCrunch
+*.ncrunch*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+test*.trx
+
+# Trace files
+*.gpState
+
+# -----------------------------------------------------------------------------
+# JETBRAINS RIDER / RESHARPER
+# -----------------------------------------------------------------------------
+
+.idea/
+*.sln.iml
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# -----------------------------------------------------------------------------
+# VISUAL STUDIO CODE
+# -----------------------------------------------------------------------------
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# -----------------------------------------------------------------------------
+# SISTEMA OPERATIVO
+# -----------------------------------------------------------------------------
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# -----------------------------------------------------------------------------
+# HERRAMIENTAS DE DESARROLLO
+# -----------------------------------------------------------------------------
+
+# Entity Framework Migrations
+**/Migrations/*.Designer.cs
+
+# DocFX
+_site/
+api/
+
+# Archivos de backup
+*.bak
+*.tmp
+*.temp
+*.swp
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# -----------------------------------------------------------------------------
+# CARPETAS ESPECIFICAS DEL PROYECTO
+# -----------------------------------------------------------------------------
+
+# Datos locales de base de datos
+*.mdf
+*.ldf
+*.ndf
+
+# Backups de base de datos
+*.bak
+
+# SQLite (si se usa para desarrollo)
+*.db
+*.sqlite
+*.sqlite3
+
+# -----------------------------------------------------------------------------
+# DOCKER
+# -----------------------------------------------------------------------------
+
+# Docker compose override local
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+!docker-compose.prod.yml
+
+# -----------------------------------------------------------------------------
+# OTROS
+# -----------------------------------------------------------------------------
+
+# Archivos de publicacion IIS
+*.iisexpress
+
+# Carpeta de dependencias de Node (si hay frontend)
+node_modules/
+
+# Bower
+bower_components/
+
+# Archivos de lock que no deben subirse
+yarn.lock
+package-lock.json
+
+# Archivos comprimidos
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz

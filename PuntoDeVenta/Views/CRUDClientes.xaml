@@ -1,0 +1,140 @@
+<Page x:Class="PuntoDeVenta.Views.CRUDClientes"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:PuntoDeVenta.Views"
+      mc:Ignorable="d"
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="CRUDClientes" Background="White">
+
+    <Page.Resources>
+        <Style x:Key="BtnBase" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnVerde" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#2ecc71"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#27ae60"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnAzul" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#3498db"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2980b9"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnNaranja" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#f39c12"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#d35400"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnRojo" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#e74c3c"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#c0392b"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="InputLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#7f8c8d"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+
+        <Style x:Key="InputText" TargetType="TextBox">
+            <Setter Property="Height" Value="35"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="5,0,5,0"/>
+        </Style>
+    </Page.Resources>
+
+    <Border Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="60"/>
+            </Grid.RowDefinitions>
+
+            <!-- TITULO -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock x:Name="Titulo" Text="Gestion de Clientes" FontSize="28" FontWeight="Bold" Foreground="#2c3e50"/>
+                <Separator Margin="0,10,0,0"/>
+            </StackPanel>
+
+            <!-- FORMULARIO -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- COLUMNA 1 -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Datos del Cliente" FontSize="18" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Razon Social / Nombre (*)" Style="{StaticResource InputLabel}"/>
+                    <TextBox x:Name="tbRazonSocial" Style="{StaticResource InputText}"/>
+
+                    <TextBlock Text="DNI / CUIT" Style="{StaticResource InputLabel}"/>
+                    <TextBox x:Name="tbDocumento" Style="{StaticResource InputText}"/>
+                </StackPanel>
+
+                <!-- COLUMNA 2 -->
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Contacto" FontSize="18" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Telefono" Style="{StaticResource InputLabel}"/>
+                    <TextBox x:Name="tbTelefono" Style="{StaticResource InputText}"/>
+
+                    <TextBlock Text="Email" Style="{StaticResource InputLabel}"/>
+                    <TextBox x:Name="tbEmail" Style="{StaticResource InputText}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- BOTONES -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <Button x:Name="BtnRegresar" Content="Volver" Width="140" Height="45" Margin="0,0,15,0"
+                        Style="{StaticResource BtnAzul}" Background="#95a5a6" Click="BtnRegresar_Click"/>
+
+                <Button x:Name="BtnCrear" Content="Guardar Cliente" Width="180" Height="45"
+                        Style="{StaticResource BtnVerde}" Visibility="Collapsed" Click="BtnCrear_Click"/>
+
+                <Button x:Name="BtnModificar" Content="Guardar Cambios" Width="180" Height="45"
+                        Style="{StaticResource BtnNaranja}" Visibility="Collapsed" Click="BtnModificar_Click"/>
+
+                <Button x:Name="BtnEliminar" Content="Confirmar Eliminar" Width="180" Height="45"
+                        Style="{StaticResource BtnRojo}" Visibility="Collapsed" Click="BtnEliminar_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Page>

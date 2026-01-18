@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Presupuesto</title>
+</head>
+<body style="font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 25px; color: #333;">
+
+    <!-- ENCABEZADO AZUL CON LOGO Y TITULO -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
+        <tr style="padding: 15px; margin: 15px; background-color: #FFFFFF; border: 1px solid #4A90D9;">
+            <td width="80">
+                @LOGO_BASE64
+            </td>
+            <td style="background-color: #4A90D9; padding: 25px; text-align: center;">
+                <span style="color: #FFFFFF; font-size: 24px; font-weight: bold;">Presupuesto (@NRO_PRESUPUESTO)</span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- SECCION DATOS EMPRESA / DATOS CLIENTE -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #4A90D9; margin-bottom: 20px;">
+        <tr>
+            <!-- DATOS EMPRESA -->
+            <td width="50%" valign="top" style="border-right: 1px solid #4A90D9;">
+                <table width="100%" cellpadding="3" cellspacing="3">
+                    <tr>
+                        <td style="background-color: #E8F4FD; padding: 12px 12px; font-weight: bold; font-size: 9px; color: #4A90D9;">
+                            Datos Empresa
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 12px 6px 12px; font-size: 9px;">
+                            <strong>DISTRIBUIDORA DE BEBIDAS LA FAMILIA</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 12px; font-size: 9px;">
+                            Coronel Terrada 4840 - Isidro Casanova
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 12px; font-size: 9px;">
+                            Tel: 1125594005
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 12px 12px 12px; font-size: 9px;">
+                            Instagram: @lafamiliabebidas.bsas
+                        </td>
+                    </tr>
+                </table>
+            </td>
+            <!-- DATOS CLIENTE -->
+            <td width="50%" valign="top">
+                <table width="100%" cellpadding="3" cellspacing="3">
+                    <tr>
+                        <td style="background-color: #E8F4FD; padding: 8px 12px; font-weight: bold; font-size: 9px; color: #4A90D9;">
+                            Datos Cliente
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 12px 6px 12px; font-size: 9px;">
+                            <strong>@CLIENTE_NOMBRE</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 12px 12px 12px; font-size: 9px;">
+                            Documento: @CLIENTE_DOCUMENTO
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- FILA FECHA -->
+    <table width="100%" cellpadding="10" cellspacing="0" style="border: 1px solid #4A90D9; margin-bottom: 25px;">
+        <tr>
+            <td style="font-size: 10px;">
+                <strong>Fecha del presupuesto:</strong> @FECHA
+            </td>
+        </tr>
+    </table>
+
+    <!-- TABLA DE PRODUCTOS -->
+    <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse: collapse; margin-bottom: 25px;">
+        <!-- ENCABEZADO AZUL -->
+        <tr style="background-color: #4A90D9; color: #FFFFFF;">
+            <th width="45%" style="padding: 12px; text-align: left; font-size: 10px; border: 1px solid #4A90D9;">DESCRIPCION</th>
+            <th width="15%" style="padding: 12px; text-align: center; font-size: 10px; border: 1px solid #4A90D9;">UNIDADES</th>
+            <th width="20%" style="padding: 12px; text-align: right; font-size: 10px; border: 1px solid #4A90D9;">PRECIO</th>
+            <th width="20%" style="padding: 12px; text-align: right; font-size: 10px; border: 1px solid #4A90D9;">TOTAL</th>
+        </tr>
+        @PRODUCTOS_GRID
+    </table>
+
+    <!-- SECCION TOTALES -->
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td width="55%"></td>
+            <td width="45%">
+                <table width="100%" cellpadding="10" cellspacing="0" style="border: 1px solid #4A90D9;">
+                    <tr style="background-color: #F5F5F5;">
+                        <td style="font-size: 10px; text-align: right; padding-right: 20px;">SUB-TOTAL</td>
+                        <td style="font-size: 10px; text-align: right; width: 120px;">@TOTAL</td>
+                    </tr>
+                    <tr style="background-color: #4A90D9; color: #FFFFFF;">
+                        <td style="font-size: 12px; font-weight: bold; text-align: right; padding-right: 20px;">TOTAL PRESUPUESTO</td>
+                        <td style="font-size: 12px; font-weight: bold; text-align: right; width: 120px;">@TOTAL</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- PIE -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 40px;">
+        <tr>
+            <td align="center" style="font-size: 8px; color: #999;">
+                Este documento no tiene validez fiscal - Presupuesto generado por Sistema Punto de Venta
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

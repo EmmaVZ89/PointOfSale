@@ -1,0 +1,218 @@
+<Page x:Class="PuntoDeVenta.Views.CRUDUsuarios"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:PuntoDeVenta.Views"
+      mc:Ignorable="d" 
+      d:DesignHeight="600" d:DesignWidth="1000"
+      Title="CRUDUsuarios" Background="White">
+
+    <Page.Resources>
+        <!-- REUTILIZACION DE ESTILOS -->
+        <Style x:Key="BtnBase" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnVerde" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#2ecc71"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#27ae60"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnAzul" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#3498db"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2980b9"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnNaranja" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#f39c12"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#d35400"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnRojo" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#e74c3c"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#c0392b"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="InputLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#7f8c8d"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+
+        <Style x:Key="InputText" TargetType="TextBox">
+            <Setter Property="Height" Value="35"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="5,0,5,0"/>
+        </Style>
+    </Page.Resources>
+
+    <Border Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Titulo -->
+                <RowDefinition Height="*"/>    <!-- Formulario -->
+                <RowDefinition Height="60"/>   <!-- Botones -->
+            </Grid.RowDefinitions>
+
+            <!-- TITULO -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock x:Name="Titulo" Text="Gestión de Usuarios" FontSize="28" FontWeight="Bold" Foreground="#2c3e50"/>
+                <Separator Margin="0,10,0,0"/>
+            </StackPanel>
+
+            <!-- FORMULARIO -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>   <!-- Datos Personales -->
+                    <ColumnDefinition Width="40"/>  <!-- Gap -->
+                    <ColumnDefinition Width="*"/>   <!-- Cuenta y Foto -->
+                </Grid.ColumnDefinitions>
+
+                <!-- COLUMNA 1: DATOS PERSONALES -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Datos Personales" FontSize="18" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,10"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Nombre" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbNombre" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Apellido" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbApellido" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="DNI" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbDNI" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="CUIT / CUIL" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbCUIT" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Correo Electrónico" Style="{StaticResource InputLabel}"/>
+                    <TextBox x:Name="tbCorreo" Style="{StaticResource InputText}"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Teléfono" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbTelefono" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Fecha Nacimiento" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbFecha" Style="{StaticResource InputText}" ToolTip="Formato: DD/MM/AAAA"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <!-- COLUMNA 2: CUENTA Y FOTO -->
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Datos de Cuenta" FontSize="18" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,10"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Usuario (Login)" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbUsuario" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Contraseña" Style="{StaticResource InputLabel}"/>
+                            <TextBox x:Name="tbContrasenia" Style="{StaticResource InputText}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Rol / Privilegio" Style="{StaticResource InputLabel}"/>
+                    <ComboBox x:Name="cbPrivilegio" Height="35" FontSize="16" VerticalContentAlignment="Center"/>
+
+                    <TextBlock Text="Foto de Perfil" Style="{StaticResource InputLabel}" Margin="0,20,0,5"/>
+                    <Border BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="5" Height="150" Background="#f9f9f9">
+                        <Grid>
+                            <Image x:Name="imagen" Stretch="Uniform" Margin="5"/>
+                            <Button x:Name="BtnCambiarImagen" Content="Seleccionar Imagen" 
+                                    Background="Transparent" BorderBrush="Transparent" Foreground="#7f8c8d"
+                                    VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="10"
+                                    FontSize="12" Cursor="Hand" Click="BtnCambiarImagen_Click">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="#ecf0f1" CornerRadius="3" Padding="10,5">
+                                            <ContentPresenter/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- BOTONES -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <Button x:Name="BtnRegresar" Content="Volver" Width="140" Height="45" Margin="0,0,15,0"
+                        Style="{StaticResource BtnAzul}" Background="#95a5a6" Click="BtnRegresar_Click"/>
+
+                <Button x:Name="BtnCrear" Content="Guardar Usuario" Width="180" Height="45" 
+                        Style="{StaticResource BtnVerde}" Visibility="Collapsed" Click="BtnCrear_Click"/>
+
+                <Button x:Name="BtnModificar" Content="Guardar Cambios" Width="180" Height="45" 
+                        Style="{StaticResource BtnNaranja}" Visibility="Collapsed" Click="BtnModificar_Click"/>
+
+                <Button x:Name="BtnEliminar" Content="Confirmar Eliminar" Width="180" Height="45" 
+                        Style="{StaticResource BtnRojo}" Visibility="Collapsed" Click="BtnEliminar_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Page>

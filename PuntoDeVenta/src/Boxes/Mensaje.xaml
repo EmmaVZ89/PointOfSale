@@ -1,0 +1,77 @@
+<Window x:Class="PuntoDeVenta.src.Boxes.Mensaje"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mensaje" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen" WindowStyle="None"
+        AllowsTransparency="True" Background="Transparent">
+
+    <Grid Background="Transparent"> <!-- Fondo transparente limpio -->
+        <Border Width="350" Background="White" CornerRadius="10" Margin="20"> <!-- Margen para la sombra -->
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="15" Opacity="0.3" ShadowDepth="0"/>
+            </Border.Effect>
+            
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Header Color -->
+                    <RowDefinition Height="Auto"/> <!-- Icono -->
+                    <RowDefinition Height="*"/>    <!-- Texto -->
+                    <RowDefinition Height="60"/>   <!-- Botones -->
+                </Grid.RowDefinitions>
+
+                <!-- Barra Superior de Color -->
+                <Border x:Name="ColorBar" Grid.Row="0" Height="10" CornerRadius="10,10,0,0" Background="#3498DB"/>
+
+                <!-- Icono -->
+                <Viewbox Grid.Row="1" Width="50" Height="50" Margin="0,20,0,10">
+                    <Path x:Name="IconPath" Fill="#3498DB" Data="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                </Viewbox>
+
+                <!-- Texto -->
+                <StackPanel Grid.Row="2" Margin="20,0,20,10">
+                    <TextBlock x:Name="txtTitulo" Text="Información" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#2C3E50"/>
+                    <TextBlock x:Name="txtMensaje" Text="Mensaje del sistema..." FontSize="14" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" Foreground="#7F8C8D" Margin="0,10,0,0"/>
+                </StackPanel>
+
+                <!-- Botones -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button x:Name="btnCancelar" Content="Cancelar" Width="100" Height="35" Margin="0,0,10,0" Click="BtnCancelar_Click" Visibility="Collapsed">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#E74C3C"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button x:Name="btnAceptar" Content="Aceptar" Width="100" Height="35" Click="BtnAceptar_Click">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#2ECC71"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
