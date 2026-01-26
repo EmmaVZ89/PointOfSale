@@ -50,7 +50,7 @@ namespace PuntoDeVenta.API.Controllers
                 if (usuario == null)
                 {
                     return Unauthorized(ApiResponse<LoginResponse>.Error(
-                        "Credenciales invalidas"));
+                        "Credenciales inválidas"));
                 }
 
                 if (!usuario.Activo)
@@ -107,7 +107,7 @@ namespace PuntoDeVenta.API.Controllers
                 if (usuario == null)
                 {
                     return Unauthorized(ApiResponse<LoginResponse>.Error(
-                        "Patron invalido"));
+                        "Patrón inválido"));
                 }
 
                 if (!usuario.Activo)

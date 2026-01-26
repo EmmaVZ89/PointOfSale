@@ -92,9 +92,13 @@ namespace Capa_Datos.Repositories
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
-            // Attach marca la entidad como Modified
-            _dbSet.Attach(entity);
-            _context.Entry(entity).State = EntityState.Modified;
+            // Si la entidad ya esta siendo tracked, solo marcamos como Modified
+            var entry = _context.Entry(entity);
+            if (entry.State == EntityState.Detached)
+            {
+                _dbSet.Attach(entity);
+            }
+            entry.State = EntityState.Modified;
 
             return Task.CompletedTask;
         }

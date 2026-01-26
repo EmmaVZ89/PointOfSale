@@ -23,7 +23,7 @@ namespace PuntoDeVenta.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene todos los usuarios activos (solo Admin)
+        /// Obtiene todos los usuarios (activos e inactivos) - solo Admin
         /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin")]
@@ -31,7 +31,7 @@ namespace PuntoDeVenta.API.Controllers
         {
             try
             {
-                var usuarios = await _unitOfWork.Usuarios.GetActivosAsync();
+                var usuarios = await _unitOfWork.Usuarios.GetAllAsync();
 
                 var usuariosDTO = usuarios.Select(u => new UsuarioDTO
                 {
@@ -104,7 +104,7 @@ namespace PuntoDeVenta.API.Controllers
             {
                 if (string.IsNullOrWhiteSpace(termino))
                 {
-                    return BadRequest(ApiResponse<IEnumerable<UsuarioDTO>>.Error("El termino de busqueda es requerido"));
+                    return BadRequest(ApiResponse<IEnumerable<UsuarioDTO>>.Error("El término de búsqueda es requerido"));
                 }
 
                 var usuarios = await _unitOfWork.Usuarios.BuscarPorNombreAsync(termino);
@@ -154,23 +154,28 @@ namespace PuntoDeVenta.API.Controllers
                     return BadRequest(ApiResponse<UsuarioDTO>.Error("Ya existe un usuario con ese DNI"));
                 }
 
+                // Convertir fecha a UTC para PostgreSQL
+                var fechaNacUtc = DateTime.SpecifyKind(dto.FechaNac, DateTimeKind.Utc);
+
+                // Si no se proporciona patron, usar uno por defecto (usado para encriptacion legacy)
+                var patron = string.IsNullOrEmpty(dto.Patron) ? "PuntoDeVenta" : dto.Patron;
+
                 var usuario = new CE_Usuarios
                 {
                     Nombre = dto.Nombre,
                     Apellido = dto.Apellido,
                     Dni = dto.Dni,
-                    Correo = dto.Correo,
-                    Telefono = dto.Telefono,
-                    Fecha_Nac = dto.FechaNac,
+                    Correo = dto.Correo ?? string.Empty,
+                    Telefono = dto.Telefono ?? string.Empty,
+                    Fecha_Nac = fechaNacUtc,
                     Privilegio = dto.Privilegio,
                     Usuario = dto.Usuario,
-                    Contrasenia = dto.Contrasena, // TODO: Hashear con BCrypt
-                    Patron = dto.Patron,
+                    Patron = patron,
                     Activo = true
                 };
 
-                await _unitOfWork.Usuarios.AddAsync(usuario);
-                await _unitOfWork.SaveChangesAsync();
+                // Usar metodo especial para insertar con contrasena encriptada
+                await _unitOfWork.Usuarios.CreateWithPasswordAsync(usuario, dto.Contrasena);
 
                 var usuarioDTO = new UsuarioDTO
                 {
@@ -267,6 +272,68 @@ namespace PuntoDeVenta.API.Controllers
                 await _unitOfWork.SaveChangesAsync();
 
                 return Ok(ApiResponse<bool>.Ok(true, "Usuario eliminado exitosamente"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<bool>.Error(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Reactiva un usuario inactivo
+        /// </summary>
+        [HttpPost("{id}/reactivar")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<bool>>> Reactivar(int id)
+        {
+            try
+            {
+                var usuario = await _unitOfWork.Usuarios.GetByIdAsync(id);
+
+                if (usuario == null)
+                {
+                    return NotFound(ApiResponse<bool>.Error("Usuario no encontrado"));
+                }
+
+                if (usuario.Activo)
+                {
+                    return BadRequest(ApiResponse<bool>.Error("El usuario ya está activo"));
+                }
+
+                await _unitOfWork.Usuarios.CambiarEstadoAsync(id, true);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(ApiResponse<bool>.Ok(true, "Usuario reactivado exitosamente"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<bool>.Error(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Cambia la contrasena de un usuario (solo Admin)
+        /// </summary>
+        [HttpPost("{id}/cambiar-contrasena")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<bool>>> CambiarContrasena(int id, [FromBody] CambiarContrasenaDTO dto)
+        {
+            try
+            {
+                var usuario = await _unitOfWork.Usuarios.GetByIdAsync(id);
+
+                if (usuario == null)
+                {
+                    return NotFound(ApiResponse<bool>.Error("Usuario no encontrado"));
+                }
+
+                // Usar el patron del usuario para encriptar la nueva contrasena
+                var patron = usuario.Patron ?? "PuntoDeVenta";
+
+                // Actualizar contraseña usando pgp_sym_encrypt
+                await _unitOfWork.Usuarios.ActualizarContrasenaAsync(id, dto.NuevaContrasena, patron);
+
+                return Ok(ApiResponse<bool>.Ok(true, "Contraseña actualizada exitosamente"));
             }
             catch (Exception ex)
             {

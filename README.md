@@ -134,5 +134,5 @@ MIT License
 
 ## Autor
 
-**Emmanuel Valdez**
+**Emmanuel Zelarayan**
 - GitHub: [@EmmaVZ89](https://github.com/EmmaVZ89)

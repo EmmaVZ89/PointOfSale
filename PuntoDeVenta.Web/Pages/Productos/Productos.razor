@@ -1,0 +1,1214 @@
+@page "/productos"
+@attribute [Authorize]
+@using PuntoDeVenta.Web.Services
+@inject IProductoService ProductoService
+@inject IGrupoService GrupoService
+@inject IPresentacionService PresentacionService
+@inject IToastService ToastService
+@inject IJSRuntime JS
+
+<PageTitle>Productos - Gestión POS</PageTitle>
+
+<PageHeader Title="Productos" Subtitle="Gestión de productos del inventario">
+    <ActionContent>
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" disabled="@isDownloading">
+                @if (isDownloading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                else
+                {
+                    <i class="bi bi-download me-2"></i>
+                }
+                Lista de Precios
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" @onclick="DescargarExcel" @onclick:preventDefault><i class="bi bi-file-earmark-excel me-2"></i>Descargar Excel</a></li>
+                <li><a class="dropdown-item" href="#" @onclick="DescargarPDF" @onclick:preventDefault><i class="bi bi-filetype-pdf me-2"></i>Descargar PDF</a></li>
+            </ul>
+        </div>
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <button class="btn btn-primary" @onclick="ShowCreateModal">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    Nuevo Producto
+                </button>
+            </Authorized>
+        </AuthorizeView>
+    </ActionContent>
+</PageHeader>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Buscar por nombre o código..."
+                           @bind="searchTerm"
+                           @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <select class="form-select" @bind="selectedGrupo">
+                    <option value="">Todos los grupos</option>
+                    @foreach (var grupo in grupos)
+                    {
+                        <option value="@grupo.IdGrupo">@grupo.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <select class="form-select" @bind="filterActivo">
+                    <option value="">Todos</option>
+                    <option value="true">Activos</option>
+                    <option value="false">Inactivos</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <LoadingSpinner IsLoading="true" Message="Cargando productos..." />
+}
+else if (!FilteredProducts.Any())
+{
+    <EmptyState Title="Sin productos"
+                Message="No se encontraron productos con los filtros aplicados."
+                IconClass="bi-box-seam">
+        <ActionContent>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <button class="btn btn-primary" @onclick="ShowCreateModal">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Crear Producto
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        </ActionContent>
+    </EmptyState>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-to-cards mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Grupo</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-end">Stock</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var producto in FilteredProducts)
+                        {
+                            <tr>
+                                <td data-label="Código">
+                                    <code>@producto.Codigo</code>
+                                </td>
+                                <td data-label="Nombre">
+                                    <strong>@producto.Nombre</strong>
+                                    @if (!string.IsNullOrEmpty(producto.Descripcion))
+                                    {
+                                        <br />
+                                        <small class="text-muted">@producto.Descripcion</small>
+                                    }
+                                </td>
+                                <td data-label="Grupo">
+                                    <span class="badge bg-secondary">@producto.GrupoNombre</span>
+                                </td>
+                                <td data-label="Precio" class="text-end fw-bold">
+                                    @FormatHelper.FormatCurrency(producto.Precio)
+                                </td>
+                                <td data-label="Stock" class="text-end">
+                                    @if (producto.Cantidad <= 0)
+                                    {
+                                        <span class="badge bg-danger">Sin stock</span>
+                                    }
+                                    else if (producto.Cantidad < 10)
+                                    {
+                                        <span class="badge bg-warning">@producto.Cantidad @producto.UnidadMedida</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@producto.Cantidad @producto.UnidadMedida</span>
+                                    }
+                                </td>
+                                <td data-label="Estado">
+                                    @if (producto.Activo)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    }
+                                </td>
+                                <td data-label="Acciones" class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" @onclick="() => ShowDetailModal(producto)" title="Ver Detalle">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <AuthorizeView Roles="Admin">
+                                            <Authorized>
+                                                <button class="btn btn-outline-warning" @onclick="() => ShowPresentacionesModal(producto)" title="Presentaciones">
+                                                    <i class="bi bi-box-seam"></i>
+                                                </button>
+                                                <button class="btn btn-outline-primary" @onclick="() => ShowEditModal(producto)" title="Editar">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                @if (producto.Activo)
+                                                {
+                                                    <button class="btn btn-outline-danger" @onclick="() => ShowDeleteConfirm(producto)" title="Desactivar">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-outline-success" @onclick="() => ActivarProducto(producto)" title="Activar">
+                                                        <i class="bi bi-check-circle"></i>
+                                                    </button>
+                                                }
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Create/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi @(isEditing ? "bi-pencil" : "bi-plus-lg") me-2"></i>
+                        @(isEditing ? "Editar Producto" : "Nuevo Producto")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="@formModel" OnValidSubmit="SaveProduct">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre *</label>
+                                <InputText @bind-Value="formModel.Nombre" class="form-control" />
+                                <ValidationMessage For="@(() => formModel.Nombre)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Código *</label>
+                                <InputText @bind-Value="formModel.Codigo" class="form-control" />
+                                <ValidationMessage For="@(() => formModel.Codigo)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Grupo *</label>
+                                <InputSelect @bind-Value="formModel.Grupo" class="form-select">
+                                    <option value="0">Seleccione...</option>
+                                    @foreach (var grupo in grupos)
+                                    {
+                                        <option value="@grupo.IdGrupo">@grupo.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => formModel.Grupo)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Precio *</label>
+                                <InputNumber @bind-Value="formModel.Precio" class="form-control" />
+                                <ValidationMessage For="@(() => formModel.Precio)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Stock Inicial</label>
+                                <InputNumber @bind-Value="formModel.Cantidad" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Unidad de Medida</label>
+                                <InputText @bind-Value="formModel.UnidadMedida" class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <InputTextArea @bind-Value="formModel.Descripcion" class="form-control" rows="2" />
+                            </div>
+                            @if (isEditing)
+                            {
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="switchActivo" @bind="formModelActivo" />
+                                        <label class="form-check-label" for="switchActivo">
+                                            @if (formModelActivo)
+                                            {
+                                                <span class="text-success fw-bold">Producto Activo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-secondary">Producto Inactivo</span>
+                                            }
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg me-2"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Detail Modal -->
+@if (showDetailModal && detailProduct != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Detalle del Producto
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showDetailModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Código</label>
+                            <p class="mb-0 fw-bold"><code>@detailProduct.Codigo</code></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            @if (detailProduct.Activo)
+                            {
+                                <span class="badge bg-success fs-6">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary fs-6">Inactivo</span>
+                            }
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Nombre</label>
+                            <p class="mb-0 fw-bold fs-5">@detailProduct.Nombre</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Descripción</label>
+                            <p class="mb-0">@(string.IsNullOrEmpty(detailProduct.Descripcion) ? "Sin descripción" : detailProduct.Descripcion)</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Grupo</label>
+                            <p class="mb-0"><span class="badge bg-secondary">@detailProduct.GrupoNombre</span></p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Unidad de Medida</label>
+                            <p class="mb-0">@detailProduct.UnidadMedida</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Precio</label>
+                            <p class="mb-0 fw-bold text-primary fs-4">@FormatHelper.FormatCurrency(detailProduct.Precio)</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Stock Disponible</label>
+                            @if (detailProduct.Cantidad <= 0)
+                            {
+                                <p class="mb-0"><span class="badge bg-danger">Sin stock</span></p>
+                            }
+                            else if (detailProduct.Cantidad < 10)
+                            {
+                                <p class="mb-0"><span class="badge bg-warning">@detailProduct.Cantidad @detailProduct.UnidadMedida</span></p>
+                            }
+                            else
+                            {
+                                <p class="mb-0 fw-bold">@detailProduct.Cantidad @detailProduct.UnidadMedida</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDetailModal = false">
+                        Cerrar
+                    </button>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <button type="button" class="btn btn-primary" @onclick="() => { showDetailModal = false; ShowEditModal(detailProduct); }">
+                                <i class="bi bi-pencil me-2"></i>Editar
+                            </button>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Deactivate Confirm Dialog -->
+<ConfirmDialog IsVisible="@showDeleteDialog"
+               Title="Desactivar Producto"
+               Message="@($"¿Está seguro de desactivar el producto '{selectedProduct?.Nombre}'? Podrá reactivarlo posteriormente.")"
+               ConfirmText="Desactivar"
+               ConfirmButtonClass="btn-danger"
+               IconClass="bi-x-circle"
+               OnConfirm="DeleteProduct"
+               OnCancel="() => showDeleteDialog = false" />
+
+<!-- Presentaciones Modal -->
+@if (showPresentacionesModal && presentacionesProducto != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Presentaciones - @presentacionesProducto.Nombre
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="ClosePresentacionesModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isLoadingPresentaciones)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">Cargando presentaciones...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Lista de presentaciones existentes -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Presentaciones Activas</h6>
+                            @if (!presentaciones.Any())
+                            {
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    No hay presentaciones configuradas para este producto.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th class="text-center">Unidades</th>
+                                                <th class="text-end">Precio</th>
+                                                <th class="text-end">Precio Unit.</th>
+                                                <th class="text-center">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var pres in presentaciones.OrderBy(p => p.CantidadUnidades))
+                                            {
+                                                <tr class="@(!pres.Activo ? "table-secondary" : "")">
+                                                    <td>
+                                                        @pres.Nombre
+                                                        @if (pres.CantidadUnidades == 1)
+                                                        {
+                                                            <span class="badge bg-primary ms-1">Base</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">@pres.CantidadUnidades</td>
+                                                    <td class="text-end fw-bold">@FormatHelper.FormatCurrency(pres.Precio)</td>
+                                                    <td class="text-end text-muted">@FormatHelper.FormatCurrency(pres.PrecioUnitario)</td>
+                                                    <td class="text-center">
+                                                        @if (pres.CantidadUnidades != 1)
+                                                        {
+                                                            <div class="btn-group btn-group-sm">
+                                                                <button class="btn btn-outline-primary btn-sm" @onclick="() => EditarPresentacion(pres)" title="Editar">
+                                                                    <i class="bi bi-pencil"></i>
+                                                                </button>
+                                                                @if (pres.Activo)
+                                                                {
+                                                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => DesactivarPresentacion(pres)" title="Desactivar">
+                                                                        <i class="bi bi-x-circle"></i>
+                                                                    </button>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <button class="btn btn-outline-success btn-sm" @onclick="() => ActivarPresentacion(pres)" title="Activar">
+                                                                        <i class="bi bi-check-circle"></i>
+                                                                    </button>
+                                                                }
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => EditarPresentacion(pres)" title="Editar Precio">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Alta rápida de pack -->
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-lightning-fill text-warning me-2"></i>
+                                    Alta Rápida de Pack
+                                </h6>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-auto">
+                                        <label class="form-label small">Tipo de Pack</label>
+                                        <select class="form-select form-select-sm" @bind="selectedTipoPack">
+                                            <option value="0">Seleccione...</option>
+                                            <option value="6">Pack x6</option>
+                                            <option value="12">Pack x12</option>
+                                            <option value="18">Pack x18</option>
+                                            <option value="24">Pack x24</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <label class="form-label small">Precio del Pack</label>
+                                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
+                                               style="width: 120px;" @bind="precioPack" placeholder="0.00" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button class="btn btn-success btn-sm" @onclick="CrearPackRapido"
+                                                disabled="@(selectedTipoPack == 0 || precioPack <= 0 || isSavingPresentacion)">
+                                            @if (isSavingPresentacion)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            <i class="bi bi-plus-lg me-1"></i>
+                                            Crear Pack
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <hr class="my-3" />
+
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-gear me-2"></i>
+                                    Presentación Personalizada
+                                </h6>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Nombre</label>
+                                        <input type="text" class="form-control form-control-sm"
+                                               @bind="presentacionCustom.Nombre" placeholder="Ej: Caja" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Unidades</label>
+                                        <input type="number" min="2" class="form-control form-control-sm"
+                                               @bind="presentacionCustom.CantidadUnidades" placeholder="10" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Precio</label>
+                                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm"
+                                               @bind="presentacionCustom.Precio" placeholder="0.00" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button class="btn btn-primary btn-sm" @onclick="CrearPresentacionCustom"
+                                                disabled="@(string.IsNullOrWhiteSpace(presentacionCustom.Nombre) || presentacionCustom.CantidadUnidades < 2 || presentacionCustom.Precio <= 0 || isSavingPresentacion)">
+                                            @if (isSavingPresentacion)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            <i class="bi bi-plus-lg me-1"></i>
+                                            Crear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePresentacionesModal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Presentacion Modal -->
+@if (showEditPresentacionModal && editingPresentacion != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil me-2"></i>
+                        Editar Presentación
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showEditPresentacionModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" @bind="editPresentacionNombre"
+                               disabled="@(editingPresentacion.CantidadUnidades == 1)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Precio</label>
+                        <input type="number" step="0.01" min="0.01" class="form-control" @bind="editPresentacionPrecio" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showEditPresentacionModal = false">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="GuardarPresentacion"
+                            disabled="@(editPresentacionPrecio <= 0 || isSavingPresentacion)">
+                        @if (isSavingPresentacion)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductoDTO> productos = new();
+    private List<GrupoDTO> grupos = new();
+    private bool isLoading = true;
+    private bool isDownloading = false;
+    private bool showModal = false;
+    private bool showDeleteDialog = false;
+    private bool showDetailModal = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+
+    private string searchTerm = "";
+    private string selectedGrupo = "";
+    private string filterActivo = "";
+
+    private ProductoCreateDTO formModel = new();
+    private ProductoDTO? selectedProduct;
+    private ProductoDTO? detailProduct;
+    private int? editingId;
+    private bool formModelActivo = true;
+
+    // Presentaciones
+    private bool showPresentacionesModal = false;
+    private bool showEditPresentacionModal = false;
+    private bool isLoadingPresentaciones = false;
+    private bool isSavingPresentacion = false;
+    private ProductoDTO? presentacionesProducto;
+    private List<PresentacionDTO> presentaciones = new();
+    private int selectedTipoPack = 0;
+    private decimal precioPack = 0;
+    private PresentacionCreateDTO presentacionCustom = new();
+    private PresentacionDTO? editingPresentacion;
+    private string editPresentacionNombre = "";
+    private decimal editPresentacionPrecio = 0;
+
+    private IEnumerable<ProductoDTO> FilteredProducts => productos.Where(p =>
+        (string.IsNullOrWhiteSpace(searchTerm) ||
+         p.Nombre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+         p.Codigo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(selectedGrupo) || p.Grupo.ToString() == selectedGrupo) &&
+        (string.IsNullOrWhiteSpace(filterActivo) || p.Activo.ToString().ToLower() == filterActivo.ToLower())
+    );
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        var productosTask = ProductoService.GetAllAsync();
+        var gruposTask = GrupoService.GetAllAsync();
+
+        await Task.WhenAll(productosTask, gruposTask);
+
+        var productosResponse = await productosTask;
+        var gruposResponse = await gruposTask;
+
+        if (productosResponse.Success && productosResponse.Data != null)
+        {
+            productos = productosResponse.Data;
+        }
+
+        if (gruposResponse.Success && gruposResponse.Data != null)
+        {
+            grupos = gruposResponse.Data;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task<List<PresentacionDTO>> ObtenerPresentacionesParaListado()
+    {
+        // Obtener todas las presentaciones activas de productos activos
+        var response = await PresentacionService.GetAllActivasAsync();
+
+        if (!response.Success || response.Data == null)
+        {
+            return new List<PresentacionDTO>();
+        }
+
+        return response.Data.OrderBy(p => p.ProductoNombre).ThenBy(p => p.CantidadUnidades).ToList();
+    }
+
+    private async Task DescargarExcel()
+    {
+        if (isDownloading) return;
+
+        isDownloading = true;
+        StateHasChanged();
+
+        try
+        {
+            var presentacionesActivas = await ObtenerPresentacionesParaListado();
+
+            if (!presentacionesActivas.Any())
+            {
+                ToastService.ShowWarning("No hay productos activos para exportar.");
+                return;
+            }
+
+            var fechaActual = FormatHelper.FormatDate(DateTime.Now);
+
+            // Generar Excel
+            var data = new List<object[]>
+            {
+                new object[] { $"LISTA DE PRECIOS - Fecha: {fechaActual}", "", "", "", "" },
+                new object[] { "CODIGO", "PRODUCTO", "PRESENTACION", "UNIDADES", "PRECIO" }
+            };
+
+            foreach (var p in presentacionesActivas)
+            {
+                data.Add(new object[]
+                {
+                    p.ProductoCodigo ?? "",
+                    p.ProductoNombre ?? "",
+                    p.Nombre ?? "",
+                    p.CantidadUnidades,
+                    p.Precio
+                });
+            }
+
+            var columnTypes = new[] { "text", "text", "text", "integer", "currency" };
+            await JS.InvokeVoidAsync("exportToExcel", data, $"Lista_Precios_{DateTime.Now:yyyyMMdd}", columnTypes);
+
+            ToastService.ShowSuccess($"Excel descargado ({presentacionesActivas.Count} presentaciones).");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar Excel: {ex.Message}");
+        }
+        finally
+        {
+            isDownloading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarPDF()
+    {
+        if (isDownloading) return;
+
+        isDownloading = true;
+        StateHasChanged();
+
+        try
+        {
+            var presentacionesActivas = await ObtenerPresentacionesParaListado();
+
+            if (!presentacionesActivas.Any())
+            {
+                ToastService.ShowWarning("No hay productos activos para exportar.");
+                return;
+            }
+
+            var fechaActual = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+
+            // Generar HTML para PDF
+            var html = new System.Text.StringBuilder();
+            html.AppendLine(@"
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+                    h1 { color: #333; font-size: 18px; margin-bottom: 5px; }
+                    .fecha { color: #666; font-size: 11px; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { background-color: #4A90D9; color: white; padding: 8px; text-align: left; }
+                    td { padding: 6px 8px; border-bottom: 1px solid #ddd; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    .precio { text-align: right; font-weight: bold; }
+                    .codigo { font-family: monospace; }
+                    .unidades { text-align: center; }
+                </style>
+            </head>
+            <body>
+                <h1>LISTA DE PRECIOS</h1>
+                <p class='fecha'>Fecha: " + fechaActual + @"</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style='width: 12%'>CODIGO</th>
+                            <th style='width: 35%'>PRODUCTO</th>
+                            <th style='width: 20%'>PRESENTACION</th>
+                            <th style='width: 13%'>UNIDADES</th>
+                            <th style='width: 20%'>PRECIO</th>
+                        </tr>
+                    </thead>
+                    <tbody>");
+
+            foreach (var p in presentacionesActivas)
+            {
+                html.AppendLine($@"
+                        <tr>
+                            <td class='codigo'>{p.ProductoCodigo}</td>
+                            <td>{p.ProductoNombre ?? ""}</td>
+                            <td>{p.Nombre ?? ""}</td>
+                            <td class='unidades'>{p.CantidadUnidades}</td>
+                            <td class='precio'>{FormatHelper.FormatCurrency(p.Precio)}</td>
+                        </tr>");
+            }
+
+            html.AppendLine(@"
+                    </tbody>
+                </table>
+                <p style='margin-top: 20px; font-size: 10px; color: #999;'>Total: " + presentacionesActivas.Count + @" presentaciones</p>
+            </body>
+            </html>");
+
+            // Imprimir usando ventana de impresión del navegador
+            await JS.InvokeVoidAsync("printContent", html.ToString(), "Lista de Precios");
+
+            ToastService.ShowSuccess($"PDF generado ({presentacionesActivas.Count} presentaciones).");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al generar PDF: {ex.Message}");
+        }
+        finally
+        {
+            isDownloading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        isEditing = false;
+        editingId = null;
+        formModel = new ProductoCreateDTO
+        {
+            UnidadMedida = "Unidad"
+        };
+        showModal = true;
+    }
+
+    private void ShowEditModal(ProductoDTO producto)
+    {
+        isEditing = true;
+        editingId = producto.IdArticulo;
+        formModelActivo = producto.Activo;
+        formModel = new ProductoCreateDTO
+        {
+            Nombre = producto.Nombre,
+            Codigo = producto.Codigo,
+            Grupo = producto.Grupo,
+            Precio = producto.Precio,
+            Cantidad = producto.Cantidad,
+            UnidadMedida = producto.UnidadMedida,
+            Descripcion = producto.Descripcion
+        };
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formModel = new ProductoCreateDTO();
+    }
+
+    private void ShowDeleteConfirm(ProductoDTO producto)
+    {
+        selectedProduct = producto;
+        showDeleteDialog = true;
+    }
+
+    private void ShowDetailModal(ProductoDTO producto)
+    {
+        detailProduct = producto;
+        showDetailModal = true;
+    }
+
+    private async Task SaveProduct()
+    {
+        isSaving = true;
+
+        try
+        {
+            if (isEditing && editingId.HasValue)
+            {
+                var updateDto = new ProductoUpdateDTO
+                {
+                    Nombre = formModel.Nombre,
+                    Codigo = formModel.Codigo,
+                    Grupo = formModel.Grupo,
+                    Precio = formModel.Precio,
+                    Cantidad = formModel.Cantidad,
+                    UnidadMedida = formModel.UnidadMedida,
+                    Descripcion = formModel.Descripcion,
+                    Activo = formModelActivo
+                };
+
+                var response = await ProductoService.UpdateAsync(editingId.Value, updateDto);
+
+                if (response.Success)
+                {
+                    ToastService.ShowSuccess("Producto actualizado correctamente");
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    ToastService.ShowError(response.Message ?? "Error al actualizar");
+                }
+            }
+            else
+            {
+                var response = await ProductoService.CreateAsync(formModel);
+
+                if (response.Success)
+                {
+                    ToastService.ShowSuccess("Producto creado correctamente");
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    ToastService.ShowError(response.Message ?? "Error al crear");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteProduct()
+    {
+        showDeleteDialog = false;
+
+        if (selectedProduct == null) return;
+
+        try
+        {
+            var response = await ProductoService.CambiarEstadoAsync(selectedProduct.IdArticulo, false);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess("Producto desactivado correctamente");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al desactivar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+    }
+
+    private async Task ActivarProducto(ProductoDTO producto)
+    {
+        try
+        {
+            var response = await ProductoService.CambiarEstadoAsync(producto.IdArticulo, true);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess($"Producto '{producto.Nombre}' activado");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al activar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+    }
+
+    // ==================== PRESENTACIONES ====================
+
+    private async Task ShowPresentacionesModal(ProductoDTO producto)
+    {
+        presentacionesProducto = producto;
+        showPresentacionesModal = true;
+        selectedTipoPack = 0;
+        precioPack = 0;
+        presentacionCustom = new PresentacionCreateDTO { IdArticulo = producto.IdArticulo };
+        await LoadPresentaciones();
+    }
+
+    private void ClosePresentacionesModal()
+    {
+        showPresentacionesModal = false;
+        presentacionesProducto = null;
+        presentaciones.Clear();
+    }
+
+    private async Task LoadPresentaciones()
+    {
+        if (presentacionesProducto == null) return;
+
+        isLoadingPresentaciones = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await PresentacionService.GetByProductoAsync(presentacionesProducto.IdArticulo);
+            if (response.Success && response.Data != null)
+            {
+                presentaciones = response.Data;
+            }
+            else
+            {
+                presentaciones = new List<PresentacionDTO>();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar presentaciones: {ex.Message}");
+            presentaciones = new List<PresentacionDTO>();
+        }
+        finally
+        {
+            isLoadingPresentaciones = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CrearPackRapido()
+    {
+        if (presentacionesProducto == null || selectedTipoPack == 0 || precioPack <= 0) return;
+
+        isSavingPresentacion = true;
+        StateHasChanged();
+
+        try
+        {
+            var dto = new PresentacionRapidaDTO
+            {
+                IdArticulo = presentacionesProducto.IdArticulo,
+                TipoPack = selectedTipoPack,
+                Precio = precioPack
+            };
+
+            var response = await PresentacionService.CreateRapidaAsync(dto);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess($"Pack x{selectedTipoPack} creado exitosamente");
+                selectedTipoPack = 0;
+                precioPack = 0;
+                await LoadPresentaciones();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al crear pack");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSavingPresentacion = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CrearPresentacionCustom()
+    {
+        if (presentacionesProducto == null) return;
+        if (string.IsNullOrWhiteSpace(presentacionCustom.Nombre) ||
+            presentacionCustom.CantidadUnidades < 2 ||
+            presentacionCustom.Precio <= 0) return;
+
+        isSavingPresentacion = true;
+        StateHasChanged();
+
+        try
+        {
+            presentacionCustom.IdArticulo = presentacionesProducto.IdArticulo;
+
+            var response = await PresentacionService.CreateAsync(presentacionCustom);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess($"Presentacion '{presentacionCustom.Nombre}' creada exitosamente");
+                presentacionCustom = new PresentacionCreateDTO { IdArticulo = presentacionesProducto.IdArticulo };
+                await LoadPresentaciones();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al crear presentacion");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSavingPresentacion = false;
+            StateHasChanged();
+        }
+    }
+
+    private void EditarPresentacion(PresentacionDTO presentacion)
+    {
+        editingPresentacion = presentacion;
+        editPresentacionNombre = presentacion.Nombre;
+        editPresentacionPrecio = presentacion.Precio;
+        showEditPresentacionModal = true;
+    }
+
+    private async Task GuardarPresentacion()
+    {
+        if (editingPresentacion == null || editPresentacionPrecio <= 0) return;
+
+        isSavingPresentacion = true;
+        StateHasChanged();
+
+        try
+        {
+            var dto = new PresentacionUpdateDTO
+            {
+                Nombre = editingPresentacion.CantidadUnidades == 1 ? null : editPresentacionNombre,
+                Precio = editPresentacionPrecio
+            };
+
+            var response = await PresentacionService.UpdateAsync(editingPresentacion.IdPresentacion, dto);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess("Presentacion actualizada");
+                showEditPresentacionModal = false;
+                await LoadPresentaciones();
+
+                // Si es la presentacion unitaria, actualizar tambien la lista de productos
+                if (editingPresentacion.CantidadUnidades == 1)
+                {
+                    await LoadData();
+                }
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al actualizar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSavingPresentacion = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DesactivarPresentacion(PresentacionDTO presentacion)
+    {
+        try
+        {
+            var response = await PresentacionService.DeleteAsync(presentacion.IdPresentacion);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess($"Presentacion '{presentacion.Nombre}' desactivada");
+                await LoadPresentaciones();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al desactivar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+    }
+
+    private async Task ActivarPresentacion(PresentacionDTO presentacion)
+    {
+        try
+        {
+            var dto = new PresentacionUpdateDTO { Activo = true };
+            var response = await PresentacionService.UpdateAsync(presentacion.IdPresentacion, dto);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess($"Presentacion '{presentacion.Nombre}' activada");
+                await LoadPresentaciones();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al activar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+    }
+}

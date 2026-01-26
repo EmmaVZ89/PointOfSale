@@ -344,14 +344,16 @@ namespace PuntoDeVenta.Views
                 // Obtener datos del cliente seleccionado
                 string clienteNombre = "Consumidor Final";
                 string clienteDocumento = "-";
+                string clienteDomicilio = "-";
                 if (cbClientes.SelectedItem is CE_Clientes cliente)
                 {
-                    clienteNombre = cliente.RazonSocial;
+                    clienteNombre = !string.IsNullOrEmpty(cliente.RazonSocial) ? cliente.RazonSocial : "Consumidor Final";
                     clienteDocumento = !string.IsNullOrEmpty(cliente.Documento) ? cliente.Documento : "-";
+                    clienteDomicilio = !string.IsNullOrEmpty(cliente.Domicilio) ? cliente.Domicilio : "-";
                 }
 
                 // Generar PDF usando el nuevo formato Presupuesto A4
-                GenerarPresupuestoPDF(factura, DateTime.Now, clienteNombre, clienteDocumento,
+                GenerarPresupuestoPDF(factura, DateTime.Now, clienteNombre, clienteDocumento, clienteDomicilio,
                     carritoItems.ToList(), carritoItems.Sum(x => x.Total));
             }
             catch (Exception ex)
@@ -366,7 +368,7 @@ namespace PuntoDeVenta.Views
         /// Genera el PDF del presupuesto en formato A4 con opciones de imprimir o guardar
         /// </summary>
         public static void GenerarPresupuestoPDF(string nroPresupuesto, DateTime fecha,
-            string clienteNombre, string clienteDocumento, List<ItemVenta> items, decimal total,
+            string clienteNombre, string clienteDocumento, string clienteDomicilio, List<ItemVenta> items, decimal total,
             string rutaArchivo = null)
         {
             // Mostrar diálogo de opciones si no se especifica ruta
@@ -390,7 +392,7 @@ namespace PuntoDeVenta.Views
 
                 // Generar contenido HTML
                 string pagina = GenerarContenidoHTML(nroPresupuesto, fecha, clienteNombre,
-                    clienteDocumento, items, total, logoTempPath);
+                    clienteDocumento, clienteDomicilio, items, total, logoTempPath);
 
                 // Crear PDF
                 CrearArchivoPDF(pdfTempPath, pagina);
@@ -425,7 +427,7 @@ namespace PuntoDeVenta.Views
         /// Genera el contenido HTML del presupuesto
         /// </summary>
         private static string GenerarContenidoHTML(string nroPresupuesto, DateTime fecha,
-            string clienteNombre, string clienteDocumento, List<ItemVenta> items,
+            string clienteNombre, string clienteDocumento, string clienteDomicilio, List<ItemVenta> items,
             decimal total, string logoTempPath)
         {
             string pagina = Properties.Resources.Presupuesto.ToString();
@@ -441,6 +443,7 @@ namespace PuntoDeVenta.Views
             pagina = pagina.Replace("@FECHA", fecha.ToString("dd/MM/yyyy HH:mm"));
             pagina = pagina.Replace("@CLIENTE_NOMBRE", clienteNombre);
             pagina = pagina.Replace("@CLIENTE_DOCUMENTO", clienteDocumento);
+            pagina = pagina.Replace("@CLIENTE_DOMICILIO", clienteDomicilio);
 
             // Generar filas de productos
             string filas = "";

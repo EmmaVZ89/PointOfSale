@@ -114,10 +114,11 @@
 
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Razon Social" Binding="{Binding RazonSocial}" Width="*" ElementStyle="{StaticResource CenteredColumn}"/>
-                        <DataGridTextColumn Header="Documento" Binding="{Binding Documento}" Width="150" ElementStyle="{StaticResource CenteredColumn}"/>
-                        <DataGridTextColumn Header="Telefono" Binding="{Binding Telefono}" Width="150" ElementStyle="{StaticResource CenteredColumn}"/>
-                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200" ElementStyle="{StaticResource CenteredColumn}"/>
-                        <DataGridTextColumn Header="Estado" Binding="{Binding EstadoStr}" Width="100" ElementStyle="{StaticResource CenteredColumn}"/>
+                        <DataGridTextColumn Header="Documento" Binding="{Binding Documento}" Width="120" ElementStyle="{StaticResource CenteredColumn}"/>
+                        <DataGridTextColumn Header="Telefono" Binding="{Binding Telefono}" Width="120" ElementStyle="{StaticResource CenteredColumn}"/>
+                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="180" ElementStyle="{StaticResource CenteredColumn}"/>
+                        <DataGridTextColumn Header="Domicilio" Binding="{Binding Domicilio}" Width="180" ElementStyle="{StaticResource CenteredColumn}"/>
+                        <DataGridTextColumn Header="Estado" Binding="{Binding EstadoStr}" Width="80" ElementStyle="{StaticResource CenteredColumn}"/>
 
                         <!-- Acciones -->
                         <DataGridTemplateColumn Header="Acciones" Width="160">

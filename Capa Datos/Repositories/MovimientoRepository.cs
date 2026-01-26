@@ -69,13 +69,13 @@ namespace Capa_Datos.Repositories
                             IdMovimiento = m.IdMovimiento,
                             IdArticulo = m.IdArticulo,
                             IdUsuario = m.IdUsuario,
-                            TipoMovimiento = m.TipoMovimiento,
+                            TipoMovimiento = m.TipoMovimiento ?? "N/A",
                             Cantidad = m.Cantidad,
                             FechaMovimiento = m.FechaMovimiento,
-                            Observacion = m.Observacion,
+                            Observacion = m.Observacion ?? "",
                             NombreProducto = producto != null ? producto.Nombre : "N/A",
                             CodigoProducto = producto != null ? producto.Codigo : "N/A",
-                            UsuarioResponsable = usuario != null ? usuario.Nombre + " " + usuario.Apellido : "N/A"
+                            UsuarioResponsable = usuario != null ? (usuario.Nombre ?? "") + " " + (usuario.Apellido ?? "") : "Sistema"
                         };
 
             return await query.AsNoTracking().ToListAsync();

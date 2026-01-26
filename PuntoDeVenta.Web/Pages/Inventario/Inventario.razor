@@ -1,0 +1,907 @@
+@page "/inventario"
+@attribute [Authorize]
+@using PuntoDeVenta.Web.Services
+@inject IMovimientoService MovimientoService
+@inject IProductoService ProductoService
+@inject IGrupoService GrupoService
+@inject IToastService ToastService
+@inject IJSRuntime JS
+
+<PageTitle>Inventario - Gestión POS</PageTitle>
+
+<PageHeader Title="Inventario" Subtitle="Control de movimientos y stock">
+    <ActionContent>
+        <div class="btn-group">
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <button class="btn btn-outline-primary" @onclick="ShowStockModal" title="Ver Stock Actual">
+                        <i class="bi bi-box-seam me-1"></i>
+                        <span class="d-none d-md-inline">Stock</span>
+                    </button>
+                    <button class="btn btn-success btn-lg shadow-sm" @onclick="ShowCreateModal">
+                        <i class="bi bi-plus-circle-fill me-2"></i>
+                        <span class="d-none d-sm-inline">Registrar Movimiento</span>
+                        <span class="d-inline d-sm-none">Nuevo</span>
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </ActionContent>
+</PageHeader>
+
+<!-- KPI Cards -->
+@if (dashboard != null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-clipboard-data text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3 overflow-hidden">
+                            <h6 class="text-muted mb-1 small">Movimientos Hoy</h6>
+                            <div class="kpi-value-responsive">@dashboard.MovimientosHoy</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-arrow-down-circle text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3 overflow-hidden">
+                            <h6 class="text-muted mb-1 small">Entradas Hoy</h6>
+                            <div class="kpi-value-responsive text-success">+@FormatHelper.FormatInteger(dashboard.EntradasHoy)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-danger bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-arrow-up-circle text-danger fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3 overflow-hidden">
+                            <h6 class="text-muted mb-1 small">Salidas Hoy</h6>
+                            <div class="kpi-value-responsive text-danger">-@FormatHelper.FormatInteger(dashboard.SalidasHoy)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-arrow-left-right text-warning fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3 overflow-hidden">
+                            <h6 class="text-muted mb-1 small">Ajustes Hoy</h6>
+                            <div class="kpi-value-responsive text-warning">@FormatHelper.FormatInteger(dashboard.AjustesHoy)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    @if (dashboard.TopProductosMovidos.Any())
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-lg-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-0">
+                        <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Top 5 Productos Movidos Hoy</h6>
+                    </div>
+                    <div class="card-body">
+                        <ApexChart TItem="TopProductoMovidoDTO"
+                                   Options="chartOptionsBar"
+                                   Height="200">
+                            <ApexPointSeries TItem="TopProductoMovidoDTO"
+                                             Items="dashboard.TopProductosMovidos"
+                                             SeriesType="SeriesType.Bar"
+                                             Name="Unidades"
+                                             XValue="@(e => e.NombreProducto.Length > 15 ? e.NombreProducto.Substring(0, 15) + "..." : e.NombreProducto)"
+                                             YValue="@(e => e.TotalMovido)" />
+                        </ApexChart>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-0">
+                        <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Resumen del Día</h6>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <ApexChart TItem="ChartDataItem"
+                                   Options="chartOptionsDonut"
+                                   Height="200">
+                            <ApexPointSeries TItem="ChartDataItem"
+                                             Items="resumenData"
+                                             SeriesType="SeriesType.Donut"
+                                             XValue="@(e => e.Label)"
+                                             YValue="@(e => e.Value)" />
+                        </ApexChart>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Buscar</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Producto o usuario..."
+                           @bind="filtro.Buscar" @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" @bind="filtro.TipoMovimiento">
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SALIDA">Salida</option>
+                    <option value="AJUSTE">Ajuste</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label">Desde</label>
+                <input type="date" class="form-control" @bind="filtro.FechaDesde" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+                <label class="form-label">Hasta</label>
+                <input type="date" class="form-control" @bind="filtro.FechaHasta" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-3 col-lg-3 mb-1">
+                <div class="btn-group w-100">
+                    <button class="btn btn-primary" @onclick="ApplyFilters">
+                        <i class="bi bi-search me-1"></i>
+                        Buscar
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilters" title="Limpiar filtros">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Buttons -->
+<div class="d-flex justify-content-end gap-2 mb-3">
+    <button class="btn btn-outline-success btn-sm" @onclick="ExportCSV" disabled="@(!movimientos.Any())">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+        Exportar CSV
+    </button>
+    <button class="btn btn-outline-danger btn-sm" @onclick="ExportPDF" disabled="@(!movimientos.Any())">
+        <i class="bi bi-file-earmark-pdf me-1"></i>
+        Exportar PDF
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <LoadingSpinner IsLoading="true" Message="Cargando movimientos..." />
+}
+else if (!movimientos.Any())
+{
+    <EmptyState Title="Sin movimientos"
+                Message="No se encontraron movimientos de inventario."
+                IconClass="bi-clipboard-data">
+        <ActionContent>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <button class="btn btn-primary" @onclick="ShowCreateModal">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Registrar Movimiento
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        </ActionContent>
+    </EmptyState>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-to-cards mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Producto</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Cantidad</th>
+                            <th>Usuario</th>
+                            <th>Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mov in movimientos)
+                        {
+                            <tr>
+                                <td data-label="Fecha">
+                                    <small>@mov.FechaMovimiento.ToString("dd/MM/yyyy HH:mm")</small>
+                                </td>
+                                <td data-label="Producto">
+                                    <strong>@mov.NombreProducto</strong>
+                                    <br />
+                                    <code class="small">@mov.CodigoProducto</code>
+                                </td>
+                                <td data-label="Tipo">
+                                    @switch (mov.TipoMovimiento)
+                                    {
+                                        case "ENTRADA":
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-arrow-down-circle me-1"></i>
+                                                Entrada
+                                            </span>
+                                            break;
+                                        case "SALIDA":
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-arrow-up-circle me-1"></i>
+                                                Salida
+                                            </span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-arrow-left-right me-1"></i>
+                                                Ajuste
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td data-label="Cantidad" class="text-end">
+                                    <strong class="@(mov.TipoMovimiento == "ENTRADA" ? "text-success" : mov.TipoMovimiento == "SALIDA" ? "text-danger" : "")">
+                                        @(mov.TipoMovimiento == "ENTRADA" ? "+" : mov.TipoMovimiento == "SALIDA" ? "-" : "")@mov.Cantidad
+                                    </strong>
+                                </td>
+                                <td data-label="Usuario">
+                                    <i class="bi bi-person me-1"></i>
+                                    @mov.UsuarioResponsable
+                                </td>
+                                <td data-label="Observación">
+                                    <small class="text-muted">@(mov.Observacion ?? "-")</small>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @if (paginatedResponse != null && paginatedResponse.TotalPages > 1)
+        {
+            <div class="card-footer">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        <li class="page-item @(paginatedResponse.HasPrevious ? "" : "disabled")">
+                            <button class="page-link" @onclick="() => GoToPage(filtro.Page - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                        </li>
+                        @for (int i = 1; i <= paginatedResponse.TotalPages; i++)
+                        {
+                            var pageNumber = i;
+                            <li class="page-item @(pageNumber == filtro.Page ? "active" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(pageNumber)">@pageNumber</button>
+                            </li>
+                        }
+                        <li class="page-item @(paginatedResponse.HasNext ? "" : "disabled")">
+                            <button class="page-link" @onclick="() => GoToPage(filtro.Page + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+}
+
+<!-- Create Modal -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Nuevo Movimiento
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="@formModel" OnValidSubmit="SaveMovimiento">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Producto *</label>
+                            <select class="form-select" @bind="formModel.IdArticulo" @bind:after="OnProductoSelected">
+                                <option value="0">Seleccione un producto...</option>
+                                @foreach (var producto in productos)
+                                {
+                                    <option value="@producto.IdArticulo">
+                                        @producto.Codigo - @producto.Nombre
+                                    </option>
+                                }
+                            </select>
+                            <ValidationMessage For="@(() => formModel.IdArticulo)" />
+                        </div>
+
+                        @if (selectedProducto != null)
+                        {
+                            <div class="alert @(selectedProducto.Cantidad <= selectedProducto.StockMinimo ? "alert-warning" : "alert-info") py-2 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="d-block text-muted">Stock Actual</small>
+                                        <strong class="@(selectedProducto.Cantidad <= 0 ? "text-danger" : selectedProducto.Cantidad <= selectedProducto.StockMinimo ? "text-warning" : "")">
+                                            @selectedProducto.Cantidad unidades
+                                        </strong>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="d-block text-muted">Stock Mínimo</small>
+                                        <span>@selectedProducto.StockMinimo</span>
+                                    </div>
+                                </div>
+                                @if (selectedProducto.Cantidad <= selectedProducto.StockMinimo)
+                                {
+                                    <div class="mt-2 small">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        Stock bajo - Considere hacer una entrada
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Movimiento *</label>
+                            <select class="form-select" @bind="formModel.TipoMovimiento">
+                                <option value="">Seleccione...</option>
+                                <option value="ENTRADA">Entrada</option>
+                                <option value="SALIDA">Salida</option>
+                                <option value="AJUSTE">Ajuste (establecer stock exacto)</option>
+                            </select>
+                            <ValidationMessage For="@(() => formModel.TipoMovimiento)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad *</label>
+                            <InputNumber @bind-Value="formModel.Cantidad" class="form-control" />
+                            <ValidationMessage For="@(() => formModel.Cantidad)" />
+                            @if (formModel.TipoMovimiento == "AJUSTE" && selectedProducto != null)
+                            {
+                                <small class="text-muted">
+                                    El stock quedará en exactamente @formModel.Cantidad unidades
+                                </small>
+                            }
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observación</label>
+                            <InputTextArea @bind-Value="formModel.Observacion" class="form-control" rows="2" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg me-2"></i>
+                            Registrar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Stock Report Modal -->
+@if (showStockModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Reporte de Stock Actual
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseStockModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (stockResumen != null)
+                    {
+                        <!-- Stock KPIs -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-primary bg-opacity-10 rounded-3 p-2">
+                                                    <i class="bi bi-box-seam text-primary fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3 overflow-hidden">
+                                                <div class="kpi-value-responsive text-primary">@stockResumen.TotalProductos</div>
+                                                <small class="text-muted">Total Productos</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-warning bg-opacity-10 rounded-3 p-2">
+                                                    <i class="bi bi-exclamation-triangle text-warning fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3 overflow-hidden">
+                                                <div class="kpi-value-responsive text-warning">@stockResumen.ProductosConStockBajo</div>
+                                                <small class="text-muted">Stock Bajo</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-danger bg-opacity-10 rounded-3 p-2">
+                                                    <i class="bi bi-x-circle text-danger fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3 overflow-hidden">
+                                                <div class="kpi-value-responsive text-danger">@stockResumen.ProductosSinStock</div>
+                                                <small class="text-muted">Sin Stock</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-success bg-opacity-10 rounded-3 p-2">
+                                                    <i class="bi bi-currency-dollar text-success fs-5"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3 overflow-hidden">
+                                                <div class="kpi-value-currency text-success">@FormatHelper.FormatCurrencyNoDecimals(stockResumen.ValorTotalInventario)</div>
+                                                <small class="text-muted">Valor Inventario</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="row g-2 mb-3 align-items-center">
+                            <div class="col-12 col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" placeholder="Buscar producto..."
+                                           @bind="stockBuscar" @bind:event="oninput" @onkeyup="FilterStock" />
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <select class="form-select" @bind="stockGrupoId" @bind:after="FilterStock">
+                                    <option value="0">Todos los grupos</option>
+                                    @foreach (var grupo in grupos)
+                                    {
+                                        <option value="@grupo.IdGrupo">@grupo.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="btn w-100 @(stockSoloBajo ? "btn-warning" : "btn-outline-secondary")">
+                                    <input type="checkbox" class="btn-check" @bind="stockSoloBajo" @bind:after="FilterStock" />
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Solo stock bajo
+                                </label>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <button class="btn btn-outline-success w-100" @onclick="ExportStockCSV">
+                                    <i class="bi bi-download me-1"></i>Exportar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Stock Table -->
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Producto</th>
+                                        <th>Grupo</th>
+                                        <th class="text-end">Stock</th>
+                                        <th class="text-end">Min.</th>
+                                        <th class="text-end">P. Compra</th>
+                                        <th class="text-end">P. Venta</th>
+                                        <th class="text-end">Valor Inv.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var prod in stockResumen.Productos)
+                                    {
+                                        <tr class="@(prod.StockActual <= 0 ? "table-danger" : prod.StockBajo ? "table-warning" : "")">
+                                            <td><code>@prod.Codigo</code></td>
+                                            <td>
+                                                @prod.Nombre
+                                                @if (prod.StockBajo)
+                                                {
+                                                    <i class="bi bi-exclamation-triangle text-warning ms-1" title="Stock bajo"></i>
+                                                }
+                                            </td>
+                                            <td><small class="text-muted">@prod.Grupo</small></td>
+                                            <td class="text-end">
+                                                <strong class="@(prod.StockActual <= 0 ? "text-danger" : prod.StockBajo ? "text-warning" : "")">
+                                                    @prod.StockActual
+                                                </strong>
+                                            </td>
+                                            <td class="text-end"><small>@prod.StockMinimo</small></td>
+                                            <td class="text-end">@FormatHelper.FormatCurrency(prod.PrecioCompra)</td>
+                                            <td class="text-end">@FormatHelper.FormatCurrency(prod.PrecioVenta)</td>
+                                            <td class="text-end"><strong>@FormatHelper.FormatCurrency(prod.ValorInventario)</strong></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">Cargando stock...</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseStockModal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MovimientoDTO> movimientos = new();
+    private List<ProductoDTO> productos = new();
+    private List<GrupoDTO> grupos = new();
+    private PaginatedResponse<MovimientoDTO>? paginatedResponse;
+    private MovimientoFiltroDTO filtro = new() { Page = 1, PageSize = 20 };
+    private MovimientoCreateDTO formModel = new();
+    private InventarioDashboardDTO? dashboard;
+    private StockResumenDTO? stockResumen;
+    private ProductoDTO? selectedProducto;
+
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool showStockModal = false;
+    private bool isSaving = false;
+
+    // Stock filter state
+    private string stockBuscar = "";
+    private int stockGrupoId = 0;
+    private bool stockSoloBajo = false;
+
+    // Chart data
+    private List<ChartDataItem> resumenData = new();
+    private ApexChartOptions<TopProductoMovidoDTO> chartOptionsBar = new();
+    private ApexChartOptions<ChartDataItem> chartOptionsDonut = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitChartOptions();
+        await LoadData();
+        await LoadDashboard();
+    }
+
+    private void InitChartOptions()
+    {
+        chartOptionsBar = new ApexChartOptions<TopProductoMovidoDTO>
+        {
+            Chart = new Chart { Toolbar = new Toolbar { Show = false } },
+            Colors = new List<string> { "#0d6efd" },
+            PlotOptions = new PlotOptions
+            {
+                Bar = new PlotOptionsBar { Horizontal = true, BorderRadius = 4 }
+            }
+        };
+
+        chartOptionsDonut = new ApexChartOptions<ChartDataItem>
+        {
+            Chart = new Chart { Toolbar = new Toolbar { Show = false } },
+            Colors = new List<string> { "#198754", "#dc3545", "#ffc107" },
+            Legend = new Legend { Position = LegendPosition.Bottom }
+        };
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        var response = await MovimientoService.GetAllAsync(filtro);
+
+        if (response.Success && response.Data != null)
+        {
+            paginatedResponse = response.Data;
+            movimientos = paginatedResponse.Items;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadDashboard()
+    {
+        var response = await MovimientoService.GetDashboardAsync();
+        if (response.Success && response.Data != null)
+        {
+            dashboard = response.Data;
+            resumenData = new List<ChartDataItem>
+            {
+                new ChartDataItem { Label = "Entradas", Value = dashboard.EntradasHoy },
+                new ChartDataItem { Label = "Salidas", Value = dashboard.SalidasHoy },
+                new ChartDataItem { Label = "Ajustes", Value = dashboard.AjustesHoy }
+            };
+        }
+    }
+
+    private async Task LoadProductos()
+    {
+        var response = await ProductoService.GetActivosAsync();
+        if (response.Success && response.Data != null)
+        {
+            productos = response.Data;
+        }
+    }
+
+    private async Task LoadGrupos()
+    {
+        var response = await GrupoService.GetAllAsync();
+        if (response.Success && response.Data != null)
+        {
+            grupos = response.Data;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        filtro.Page = 1;
+        await LoadData();
+    }
+
+    private async Task ClearFilters()
+    {
+        filtro = new MovimientoFiltroDTO { Page = 1, PageSize = 20 };
+        await LoadData();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        filtro.Page = page;
+        await LoadData();
+    }
+
+    private async Task ShowCreateModal()
+    {
+        await LoadProductos();
+        formModel = new MovimientoCreateDTO();
+        selectedProducto = null;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formModel = new MovimientoCreateDTO();
+        selectedProducto = null;
+    }
+
+    private void OnProductoSelected()
+    {
+        selectedProducto = productos.FirstOrDefault(p => p.IdArticulo == formModel.IdArticulo);
+    }
+
+    private async Task SaveMovimiento()
+    {
+        if (formModel.IdArticulo == 0)
+        {
+            ToastService.ShowWarning("Seleccione un producto");
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var response = await MovimientoService.CreateAsync(formModel);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess("Movimiento registrado correctamente");
+                CloseModal();
+                await LoadData();
+                await LoadDashboard();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al registrar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    // Stock Modal
+    private async Task ShowStockModal()
+    {
+        showStockModal = true;
+        stockBuscar = "";
+        stockGrupoId = 0;
+        stockSoloBajo = false;
+        await LoadGrupos();
+        await LoadStock();
+    }
+
+    private void CloseStockModal()
+    {
+        showStockModal = false;
+        stockResumen = null;
+    }
+
+    private async Task LoadStock()
+    {
+        var response = await MovimientoService.GetStockAsync(
+            string.IsNullOrEmpty(stockBuscar) ? null : stockBuscar,
+            stockSoloBajo ? true : null,
+            stockGrupoId > 0 ? stockGrupoId : null);
+
+        if (response.Success && response.Data != null)
+        {
+            stockResumen = response.Data;
+        }
+    }
+
+    private async Task FilterStock()
+    {
+        await LoadStock();
+    }
+
+    // Export Functions
+    private async Task ExportCSV()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Fecha,Tipo,Producto,Codigo,Cantidad,Usuario,Observacion");
+
+        foreach (var mov in movimientos)
+        {
+            csv.AppendLine($"{mov.FechaMovimiento:dd/MM/yyyy HH:mm},{mov.TipoMovimiento},\"{mov.NombreProducto}\",{mov.CodigoProducto},{mov.Cantidad},\"{mov.UsuarioResponsable}\",\"{mov.Observacion ?? ""}\"");
+        }
+
+        var fileName = $"Movimientos_{DateTime.Now:yyyyMMddHHmmss}.csv";
+        await DownloadFile(fileName, csv.ToString(), "text/csv");
+        ToastService.ShowSuccess("Archivo CSV exportado");
+    }
+
+    private async Task ExportPDF()
+    {
+        // Generate HTML for PDF
+        var html = GeneratePDFHtml();
+        await JS.InvokeVoidAsync("printContent", html, "Reporte de Movimientos");
+        ToastService.ShowInfo("Abriendo ventana de impresión...");
+    }
+
+    private string GeneratePDFHtml()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<html><head><style>");
+        sb.Append("body { font-family: Arial, sans-serif; font-size: 12px; }");
+        sb.Append("h1 { font-size: 18px; margin-bottom: 5px; }");
+        sb.Append("table { width: 100%; border-collapse: collapse; margin-top: 10px; }");
+        sb.Append("th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }");
+        sb.Append("th { background-color: #f5f5f5; }");
+        sb.Append(".text-right { text-align: right; }");
+        sb.Append(".entrada { color: green; } .salida { color: red; }");
+        sb.Append("</style></head><body>");
+        sb.Append("<h1>Reporte de Movimientos de Inventario</h1>");
+        sb.Append($"<p>Generado: {DateTime.Now:dd/MM/yyyy HH:mm}</p>");
+        sb.Append("<table><thead><tr>");
+        sb.Append("<th>Fecha</th><th>Tipo</th><th>Producto</th><th>Código</th><th class='text-right'>Cantidad</th><th>Usuario</th><th>Observación</th>");
+        sb.Append("</tr></thead><tbody>");
+
+        foreach (var mov in movimientos)
+        {
+            var tipoClass = mov.TipoMovimiento == "ENTRADA" ? "entrada" : mov.TipoMovimiento == "SALIDA" ? "salida" : "";
+            sb.Append($"<tr>");
+            sb.Append($"<td>{mov.FechaMovimiento:dd/MM/yyyy HH:mm}</td>");
+            sb.Append($"<td class='{tipoClass}'>{mov.TipoMovimiento}</td>");
+            sb.Append($"<td>{mov.NombreProducto}</td>");
+            sb.Append($"<td>{mov.CodigoProducto}</td>");
+            sb.Append($"<td class='text-right {tipoClass}'>{mov.Cantidad}</td>");
+            sb.Append($"<td>{mov.UsuarioResponsable}</td>");
+            sb.Append($"<td>{mov.Observacion ?? "-"}</td>");
+            sb.Append("</tr>");
+        }
+
+        sb.Append("</tbody></table></body></html>");
+        return sb.ToString();
+    }
+
+    private async Task ExportStockCSV()
+    {
+        if (stockResumen == null) return;
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Codigo,Producto,Grupo,Stock Actual,Stock Minimo,Precio Compra,Precio Venta,Valor Inventario,Stock Bajo");
+
+        foreach (var prod in stockResumen.Productos)
+        {
+            csv.AppendLine($"{prod.Codigo},\"{prod.Nombre}\",\"{prod.Grupo}\",{prod.StockActual},{prod.StockMinimo},{prod.PrecioCompra},{prod.PrecioVenta},{prod.ValorInventario},{(prod.StockBajo ? "Si" : "No")}");
+        }
+
+        var fileName = $"Stock_{DateTime.Now:yyyyMMddHHmmss}.csv";
+        await DownloadFile(fileName, csv.ToString(), "text/csv");
+        ToastService.ShowSuccess("Reporte de stock exportado");
+    }
+
+    private async Task DownloadFile(string fileName, string content, string contentType)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("downloadFile", fileName, base64, contentType);
+    }
+
+    // Helper class for chart data
+    public class ChartDataItem
+    {
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; }
+    }
+}

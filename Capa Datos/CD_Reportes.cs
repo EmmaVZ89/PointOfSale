@@ -195,11 +195,15 @@ namespace Capa_Datos
         public DataTable ObtenerCabeceraVenta(string noFactura)
         {
             // Convertir fecha a zona horaria Argentina para mostrar correctamente
+            // Incluye datos del cliente para el ticket
             string sql = "SELECT v.\"No_Factura\", " +
                          "(v.\"Fecha_Venta\" AT TIME ZONE 'America/Argentina/Buenos_Aires') AS \"Fecha_Venta\", " +
-                         "v.\"Monto_Total\", u.\"usuario\" AS \"Vendedor\" " +
+                         "v.\"Monto_Total\", u.\"usuario\" AS \"Vendedor\", " +
+                         "COALESCE(c.\"RazonSocial\", 'Consumidor Final') AS \"Cliente\", " +
+                         "c.\"Documento\", c.\"Domicilio\" " +
                          "FROM \"Ventas\" v " +
                          "INNER JOIN \"Usuarios\" u ON v.\"Id_Usuario\" = u.\"IdUsuario\" " +
+                         "LEFT JOIN \"Clientes\" c ON v.\"Id_Cliente\" = c.\"IdCliente\" " +
                          "WHERE v.\"No_Factura\" = @NoFactura";
 
             DataTable dt = new DataTable();

@@ -12,6 +12,7 @@
   <ItemGroup>
     <!-- OpenAPI / Swagger -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.10" />
+    <PackageReference Include="QuestPDF" Version="2024.3.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 
     <!-- JWT Authentication -->
@@ -32,6 +33,11 @@
     <None Include="..\appsettings.json" Link="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Logo para presupuestos PDF -->
+    <EmbeddedResource Include="Resources\logo_presupuesto.png" />
   </ItemGroup>
 
 </Project>

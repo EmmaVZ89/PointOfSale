@@ -1,0 +1,55 @@
+@inherits LayoutComponentBase
+@inject SidebarState SidebarState
+@inject IThemeService ThemeService
+@inject IJSRuntime JS
+@implements IDisposable
+
+<NavMenu />
+
+<main class="main-content @(SidebarState.IsCollapsed ? "sidebar-collapsed" : "")">
+    @Body
+</main>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        SidebarState.OnChange += StateHasChanged;
+        ThemeService.OnThemeChanged += OnThemeChanged;
+
+        await ThemeService.InitializeAsync();
+        await ApplyTheme();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ApplyTheme();
+        }
+    }
+
+    private async void OnThemeChanged()
+    {
+        await ApplyTheme();
+        StateHasChanged();
+    }
+
+    private async Task ApplyTheme()
+    {
+        var theme = ThemeService.CurrentTheme;
+        if (theme == "default")
+        {
+            await JS.InvokeVoidAsync("document.documentElement.removeAttribute", "data-theme");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", theme);
+        }
+    }
+
+    public void Dispose()
+    {
+        SidebarState.OnChange -= StateHasChanged;
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+    }
+}

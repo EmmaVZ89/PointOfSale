@@ -1,8 +1,8 @@
 -- =============================================================================
 -- SCRIPT DEFINITIVO POSTGRESQL (Neon/Supabase/Local)
 -- Punto de Venta - Distribuidora LA FAMILIA
--- Version: 3.0 - Incluye Clientes, Cancelaciones y Zona Horaria Argentina
--- Fecha: 2026-01-16
+-- Version: 3.1 - Incluye Clientes con Domicilio, Cancelaciones y Zona Horaria Argentina
+-- Fecha: 2026-01-19
 -- =============================================================================
 
 -- =============================================================================
@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS "Clientes" (
     "Documento" VARCHAR(15),
     "Telefono" VARCHAR(20),
     "Email" VARCHAR(100),
+    "Domicilio" VARCHAR(200),
     "Activo" BOOLEAN DEFAULT TRUE,
     "FechaAlta" TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'America/Argentina/Buenos_Aires')
 );

@@ -1,0 +1,282 @@
+@page "/mi-cuenta"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@inject IAuthService AuthService
+@inject IUsuarioService UsuarioService
+@inject IToastService ToastService
+@inject NavigationManager Navigation
+
+<PageTitle>Mi Cuenta - Gestión POS</PageTitle>
+
+<div class="mi-cuenta-container">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-6">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <h2 class="fw-bold mb-1">@nombreCompleto</h2>
+                <span class="badge @(esAdmin ? "bg-primary" : "bg-secondary") fs-6">
+                    @(esAdmin ? "Administrador" : "Vendedor")
+                </span>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Información Personal
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    }
+                    else if (usuario != null)
+                    {
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label text-muted small">Nombre</label>
+                                <p class="mb-0 fw-semibold">@usuario.Nombre</p>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-muted small">Apellido</label>
+                                <p class="mb-0 fw-semibold">@usuario.Apellido</p>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-muted small">Usuario</label>
+                                <p class="mb-0"><code>@usuario.Usuario</code></p>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-muted small">DNI</label>
+                                <p class="mb-0">@usuario.Dni</p>
+                            </div>
+                            @if (!string.IsNullOrEmpty(usuario.Correo))
+                            {
+                                <div class="col-12">
+                                    <label class="form-label text-muted small">Email</label>
+                                    <p class="mb-0">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        @usuario.Correo
+                                    </p>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(usuario.Telefono))
+                            {
+                                <div class="col-12">
+                                    <label class="form-label text-muted small">Teléfono</label>
+                                    <p class="mb-0">
+                                        <i class="bi bi-telephone me-1"></i>
+                                        @usuario.Telefono
+                                    </p>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Change Password Card -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-key me-2"></i>
+                    Cambiar Contraseña
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@passwordModel" OnValidSubmit="CambiarContrasena">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nueva Contraseña</label>
+                            <div class="input-group">
+                                <InputText type="@(showPassword ? "text" : "password")"
+                                           @bind-Value="passwordModel.NuevaContrasena"
+                                           class="form-control" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="() => showPassword = !showPassword">
+                                    <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                </button>
+                            </div>
+                            <ValidationMessage For="@(() => passwordModel.NuevaContrasena)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirmar Contraseña</label>
+                            <InputText type="@(showPassword ? "text" : "password")"
+                                       @bind-Value="passwordModel.ConfirmarContrasena"
+                                       class="form-control" />
+                            <ValidationMessage For="@(() => passwordModel.ConfirmarContrasena)" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(passwordError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                @passwordError
+                            </div>
+                        }
+                        <button type="submit" class="btn btn-primary w-100" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg me-2"></i>
+                            Actualizar Contraseña
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Logout Button -->
+            <div class="d-grid mt-4">
+                <button class="btn btn-outline-danger btn-lg" @onclick="Logout">
+                    <i class="bi bi-box-arrow-left me-2"></i>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .mi-cuenta-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem 0;
+    }
+
+    .avatar-lg {
+        width: 100px;
+        height: 100px;
+        background: var(--primary-50);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .avatar-lg i {
+        font-size: 4rem;
+        color: var(--primary-color);
+    }
+</style>
+
+@code {
+    private Models.UsuarioDTO? usuario;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showPassword = false;
+    private string passwordError = "";
+
+    private string nombreCompleto => usuario != null ? $"{usuario.Nombre} {usuario.Apellido}" : "Cargando...";
+    private bool esAdmin => usuario?.Privilegio == 1;
+
+    private CambiarContrasenaModel passwordModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        isLoading = true;
+
+        try
+        {
+            // Primero intentar obtener el usuario desde local storage (mas rapido y sin API)
+            usuario = await AuthService.GetCurrentUserAsync();
+
+            // Si no hay datos en cache, intentar obtener del API
+            if (usuario == null)
+            {
+                var userId = await AuthService.GetCurrentUserIdAsync();
+                if (userId.HasValue)
+                {
+                    var response = await UsuarioService.GetByIdAsync(userId.Value);
+                    if (response.Success && response.Data != null)
+                    {
+                        usuario = response.Data;
+                    }
+                }
+            }
+
+            if (usuario == null)
+            {
+                ToastService.ShowWarning("No se pudo cargar la información del usuario");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar datos: {ex.Message}");
+        }
+
+        isLoading = false;
+    }
+
+    private async Task CambiarContrasena()
+    {
+        passwordError = "";
+
+        if (passwordModel.NuevaContrasena != passwordModel.ConfirmarContrasena)
+        {
+            passwordError = "Las contraseñas no coinciden";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(passwordModel.NuevaContrasena) || passwordModel.NuevaContrasena.Length < 4)
+        {
+            passwordError = "La contraseña debe tener al menos 4 caracteres";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var userId = await AuthService.GetCurrentUserIdAsync();
+            if (!userId.HasValue)
+            {
+                passwordError = "No se pudo obtener el usuario actual";
+                return;
+            }
+
+            var dto = new Models.CambiarContrasenaDTO { NuevaContrasena = passwordModel.NuevaContrasena };
+            var response = await UsuarioService.CambiarContrasenaAsync(userId.Value, dto);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess("Contraseña actualizada correctamente");
+                passwordModel = new CambiarContrasenaModel();
+            }
+            else
+            {
+                passwordError = response.Message ?? "Error al cambiar contraseña";
+            }
+        }
+        catch (Exception ex)
+        {
+            passwordError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        ToastService.ShowInfo("Sesión cerrada correctamente");
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    public class CambiarContrasenaModel
+    {
+        [Required(ErrorMessage = "La nueva contraseña es requerida")]
+        [MinLength(4, ErrorMessage = "Mínimo 4 caracteres")]
+        public string NuevaContrasena { get; set; } = "";
+
+        [Required(ErrorMessage = "Confirme la contraseña")]
+        public string ConfirmarContrasena { get; set; } = "";
+    }
+}

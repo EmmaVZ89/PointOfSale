@@ -13,6 +13,7 @@ namespace PuntoDeVenta.API.DTOs
         public string Documento { get; set; }
         public string Telefono { get; set; }
         public string Email { get; set; }
+        public string Domicilio { get; set; }
         public bool Activo { get; set; }
         public DateTime FechaAlta { get; set; }
     }
@@ -36,6 +37,9 @@ namespace PuntoDeVenta.API.DTOs
         [EmailAddress(ErrorMessage = "El email no es valido")]
         [StringLength(100)]
         public string Email { get; set; }
+
+        [StringLength(200)]
+        public string Domicilio { get; set; }
     }
 
     /// <summary>
@@ -56,6 +60,43 @@ namespace PuntoDeVenta.API.DTOs
         [StringLength(100)]
         public string Email { get; set; }
 
+        [StringLength(200)]
+        public string Domicilio { get; set; }
+
         public bool? Activo { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para cambiar estado (activar/desactivar)
+    /// </summary>
+    public class ClienteCambiarEstadoDTO
+    {
+        [Required]
+        public bool Activo { get; set; }
+    }
+
+    /// <summary>
+    /// DTO con estadisticas del cliente
+    /// </summary>
+    public class ClienteEstadisticasDTO
+    {
+        public int IdCliente { get; set; }
+        public int TotalCompras { get; set; }
+        public decimal MontoAcumulado { get; set; }
+        public DateTime? UltimaCompra { get; set; }
+        public bool EsFrecuente { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para historial de compras simplificado
+    /// </summary>
+    public class ClienteCompraDTO
+    {
+        public int IdVenta { get; set; }
+        public string NoFactura { get; set; } = string.Empty;
+        public DateTime Fecha { get; set; }
+        public decimal Monto { get; set; }
+        public int CantidadArticulos { get; set; }
+        public bool Cancelada { get; set; }
     }
 }

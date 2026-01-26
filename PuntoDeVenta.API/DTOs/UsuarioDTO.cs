@@ -39,7 +39,7 @@ namespace PuntoDeVenta.API.DTOs
         [Required(ErrorMessage = "El DNI es requerido")]
         public int Dni { get; set; }
 
-        [EmailAddress(ErrorMessage = "El correo no es valido")]
+        [EmailAddress(ErrorMessage = "El correo no es válido")]
         public string Correo { get; set; }
 
         public string Telefono { get; set; }
@@ -53,8 +53,8 @@ namespace PuntoDeVenta.API.DTOs
         [StringLength(50, MinimumLength = 3, ErrorMessage = "El usuario debe tener entre 3 y 50 caracteres")]
         public string Usuario { get; set; }
 
-        [Required(ErrorMessage = "La contrasena es requerida")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "La contrasena debe tener entre 6 y 100 caracteres")]
+        [Required(ErrorMessage = "La contraseña es requerida")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 100 caracteres")]
         public string Contrasena { get; set; }
 
         public string Patron { get; set; }
@@ -87,15 +87,12 @@ namespace PuntoDeVenta.API.DTOs
     }
 
     /// <summary>
-    /// DTO para cambiar contrasena
+    /// DTO para cambiar contrasena (admin puede cambiar sin saber la actual)
     /// </summary>
     public class CambiarContrasenaDTO
     {
-        [Required]
-        public string ContrasenaActual { get; set; }
-
-        [Required]
-        [StringLength(100, MinimumLength = 6)]
-        public string ContrasenaNueva { get; set; }
+        [Required(ErrorMessage = "La nueva contraseña es requerida")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 100 caracteres")]
+        public string NuevaContrasena { get; set; }
     }
 }

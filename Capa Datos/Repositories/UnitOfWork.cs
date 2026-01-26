@@ -28,6 +28,9 @@ namespace Capa_Datos.Repositories
         private IClienteRepository _clientes;
         private IGrupoRepository _grupos;
         private IMovimientoRepository _movimientos;
+        private IVentaRepository _ventas;
+        private IVentaDetalleRepository _ventaDetalles;
+        private IPresentacionRepository _presentaciones;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -99,6 +102,45 @@ namespace Capa_Datos.Repositories
                 if (_movimientos == null)
                     _movimientos = new MovimientoRepository(_context);
                 return _movimientos;
+            }
+        }
+
+        /// <summary>
+        /// Repositorio de Ventas
+        /// </summary>
+        public IVentaRepository Ventas
+        {
+            get
+            {
+                if (_ventas == null)
+                    _ventas = new VentaRepository(_context);
+                return _ventas;
+            }
+        }
+
+        /// <summary>
+        /// Repositorio de Detalles de Venta
+        /// </summary>
+        public IVentaDetalleRepository VentaDetalles
+        {
+            get
+            {
+                if (_ventaDetalles == null)
+                    _ventaDetalles = new VentaDetalleRepository(_context);
+                return _ventaDetalles;
+            }
+        }
+
+        /// <summary>
+        /// Repositorio de Presentaciones de Producto
+        /// </summary>
+        public IPresentacionRepository Presentaciones
+        {
+            get
+            {
+                if (_presentaciones == null)
+                    _presentaciones = new PresentacionRepository(_context);
+                return _presentaciones;
             }
         }
 

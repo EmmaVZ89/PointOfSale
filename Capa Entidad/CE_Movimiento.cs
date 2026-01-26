@@ -10,7 +10,7 @@ namespace Capa_Entidad
     {
         private int idMovimiento;
         private int idArticulo;
-        private int idUsuario;
+        private int? idUsuario;
         private string tipoMovimiento;
         private decimal cantidad;
         private DateTime fechaMovimiento;
@@ -23,7 +23,7 @@ namespace Capa_Entidad
 
         public int IdMovimiento { get => idMovimiento; set => idMovimiento = value; }
         public int IdArticulo { get => idArticulo; set => idArticulo = value; }
-        public int IdUsuario { get => idUsuario; set => idUsuario = value; }
+        public int? IdUsuario { get => idUsuario; set => idUsuario = value; }
         public string TipoMovimiento { get => tipoMovimiento; set => tipoMovimiento = value; }
         public decimal Cantidad { get => cantidad; set => cantidad = value; }
         public DateTime FechaMovimiento { get => fechaMovimiento; set => fechaMovimiento = value; }

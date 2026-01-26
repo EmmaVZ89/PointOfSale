@@ -44,5 +44,15 @@ namespace Capa_Datos.Interfaces
         /// Activa o desactiva un usuario
         /// </summary>
         Task CambiarEstadoAsync(int idUsuario, bool activo);
+
+        /// <summary>
+        /// Crea un usuario con contrasena encriptada usando pgcrypto
+        /// </summary>
+        Task<CE_Usuarios> CreateWithPasswordAsync(CE_Usuarios usuario, string contrasena);
+
+        /// <summary>
+        /// Actualiza la contrasena de un usuario usando pgcrypto
+        /// </summary>
+        Task ActualizarContrasenaAsync(int idUsuario, string nuevaContrasena, string patron);
     }
 }

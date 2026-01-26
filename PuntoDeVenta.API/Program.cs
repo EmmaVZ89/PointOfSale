@@ -41,7 +41,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "PuntoDeVenta API",
         Version = "v1",
-        Description = "API REST para el sistema de Punto de Venta",
+        Description = "API REST para Gestión POS",
         Contact = new OpenApiContact
         {
             Name = "Emmanuel Valdez",

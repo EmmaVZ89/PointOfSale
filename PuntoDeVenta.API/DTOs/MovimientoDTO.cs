@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace PuntoDeVenta.API.DTOs
@@ -12,7 +13,7 @@ namespace PuntoDeVenta.API.DTOs
         public int IdArticulo { get; set; }
         public string NombreProducto { get; set; }
         public string CodigoProducto { get; set; }
-        public int IdUsuario { get; set; }
+        public int? IdUsuario { get; set; }
         public string UsuarioResponsable { get; set; }
         public string TipoMovimiento { get; set; }
         public decimal Cantidad { get; set; }
@@ -45,6 +46,7 @@ namespace PuntoDeVenta.API.DTOs
     /// </summary>
     public class MovimientoFiltroDTO
     {
+        public string Buscar { get; set; }
         public int? IdArticulo { get; set; }
         public int? IdUsuario { get; set; }
         public string TipoMovimiento { get; set; }
@@ -52,5 +54,57 @@ namespace PuntoDeVenta.API.DTOs
         public DateTime? FechaHasta { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 20;
+    }
+
+    /// <summary>
+    /// DTO para dashboard de inventario
+    /// </summary>
+    public class InventarioDashboardDTO
+    {
+        public int MovimientosHoy { get; set; }
+        public decimal EntradasHoy { get; set; }
+        public decimal SalidasHoy { get; set; }
+        public decimal AjustesHoy { get; set; }
+        public List<TopProductoMovidoDTO> TopProductosMovidos { get; set; } = new();
+    }
+
+    /// <summary>
+    /// DTO para top productos movidos
+    /// </summary>
+    public class TopProductoMovidoDTO
+    {
+        public int IdArticulo { get; set; }
+        public string NombreProducto { get; set; }
+        public string CodigoProducto { get; set; }
+        public decimal TotalMovido { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para reporte de stock actual
+    /// </summary>
+    public class StockActualDTO
+    {
+        public int IdArticulo { get; set; }
+        public string Codigo { get; set; }
+        public string Nombre { get; set; }
+        public string Grupo { get; set; }
+        public decimal StockActual { get; set; }
+        public decimal StockMinimo { get; set; }
+        public decimal PrecioCompra { get; set; }
+        public decimal PrecioVenta { get; set; }
+        public decimal ValorInventario { get; set; }
+        public bool StockBajo { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para resumen de stock
+    /// </summary>
+    public class StockResumenDTO
+    {
+        public int TotalProductos { get; set; }
+        public int ProductosConStockBajo { get; set; }
+        public int ProductosSinStock { get; set; }
+        public decimal ValorTotalInventario { get; set; }
+        public List<StockActualDTO> Productos { get; set; } = new();
     }
 }

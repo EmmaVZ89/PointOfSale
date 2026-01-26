@@ -1,0 +1,819 @@
+@page "/"
+@page "/dashboard"
+@attribute [Authorize]
+@using PuntoDeVenta.Web.Services
+@inject IDashboardService DashboardService
+@inject NavigationManager Navigation
+@inject IToastService ToastService
+
+<PageTitle>Dashboard - Gestión POS</PageTitle>
+
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1>Panel de Control</h1>
+            <p class="text-muted">Resumen del día</p>
+        </div>
+        <div class="header-date">
+            <i class="bi bi-calendar3"></i>
+            @DateTime.Now.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3 text-muted">Cargando datos del dashboard...</p>
+        </div>
+    }
+    else
+    {
+        <!-- KPI Cards - 4 en fila como legacy -->
+        <div class="kpi-row">
+            <!-- Ventas Hoy - Teal (Solo Admin) -->
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <div class="kpi-card-legacy kpi-teal">
+                        <div class="kpi-icon-wrapper">
+                            <i class="bi bi-currency-dollar"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-value">@FormatCurrency(resumen?.VentasHoy ?? 0)</span>
+                            <span class="kpi-label">Ventas Hoy</span>
+                        </div>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+
+            <!-- Transacciones - Azul -->
+            <div class="kpi-card-legacy kpi-blue">
+                <div class="kpi-icon-wrapper">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-value">@(resumen?.TransaccionesHoy ?? 0)</span>
+                    <span class="kpi-label">Transacciones</span>
+                </div>
+            </div>
+
+            <!-- Productos - Amarillo -->
+            <div class="kpi-card-legacy kpi-yellow">
+                <div class="kpi-icon-wrapper">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-value">@(resumen?.ProductosActivos ?? 0)</span>
+                    <span class="kpi-label">Productos</span>
+                </div>
+            </div>
+
+            <!-- Stock Bajo - Rojo -->
+            <div class="kpi-card-legacy @(resumen?.ProductosBajoStock > 0 ? "kpi-red" : "kpi-green")">
+                <div class="kpi-icon-wrapper">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-value">@(resumen?.ProductosBajoStock ?? 0)</span>
+                    <span class="kpi-label">Stock Bajo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido principal: Gráfico + Accesos rápidos -->
+        <div class="dashboard-content">
+            <!-- Gráfico de Ventas Semanales (Solo Admin) -->
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <div class="chart-section">
+                        <div class="section-header">
+                            <i class="bi bi-graph-up"></i>
+                            <span>Tendencia Semanal de Ventas</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            @if (resumen?.VentasUltimos7Dias?.Any() == true)
+                            {
+                                <ApexChart TItem="VentaDiaria"
+                                           Options="chartOptions"
+                                           Height="280">
+                                    <ApexPointSeries TItem="VentaDiaria"
+                                                     Items="resumen.VentasUltimos7Dias"
+                                                     Name="Ventas"
+                                                     SeriesType="SeriesType.Line"
+                                                     XValue="@(e => e.Fecha.ToString("dd/MM"))"
+                                                     YValue="@(e => e.Total)" />
+                                </ApexChart>
+                            }
+                            else
+                            {
+                                <div class="no-data">
+                                    <i class="bi bi-bar-chart"></i>
+                                    <p>Sin datos de ventas</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="vendor-info-section">
+                        <!-- Productos con Stock Bajo -->
+                        <div class="info-card">
+                            <div class="section-header">
+                                <i class="bi bi-exclamation-triangle text-warning"></i>
+                                <span>Productos con Stock Bajo</span>
+                            </div>
+                            <div class="info-card-body">
+                                @if (productosStockBajo?.Any() == true)
+                                {
+                                    <div class="product-list">
+                                        @foreach (var producto in productosStockBajo.Take(5))
+                                        {
+                                            <div class="product-item">
+                                                <div class="product-info">
+                                                    <span class="product-name">@producto.Nombre</span>
+                                                    @if (!string.IsNullOrEmpty(producto.Codigo))
+                                                    {
+                                                        <span class="product-code">@producto.Codigo</span>
+                                                    }
+                                                </div>
+                                                <span class="stock-badge @(producto.StockActual <= 5 ? "stock-critical" : "stock-low")">
+                                                    @producto.StockActual unid.
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-state">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        <span>Todo el stock está en orden</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Productos Más Vendidos -->
+                        <div class="info-card">
+                            <div class="section-header">
+                                <i class="bi bi-star text-primary"></i>
+                                <span>Productos Más Vendidos</span>
+                            </div>
+                            <div class="info-card-body">
+                                @if (productosTop?.Any() == true)
+                                {
+                                    <div class="product-list">
+                                        @{
+                                            var index = 1;
+                                        }
+                                        @foreach (var producto in productosTop.Take(5))
+                                        {
+                                            <div class="product-item">
+                                                <div class="product-rank">
+                                                    <span class="rank-number rank-@index">@index</span>
+                                                </div>
+                                                <div class="product-info">
+                                                    <span class="product-name">@producto.Nombre</span>
+                                                </div>
+                                                <span class="sales-badge">
+                                                    @producto.CantidadVendida vendidos
+                                                </span>
+                                            </div>
+                                            index++;
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-state">
+                                        <i class="bi bi-basket"></i>
+                                        <span>Sin datos de ventas</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+
+            <!-- Accesos Rápidos -->
+            <div class="quick-actions">
+                <div class="section-header">
+                    <i class="bi bi-lightning"></i>
+                    <span>Acceso Rápido</span>
+                </div>
+                <div class="actions-list">
+                    <button class="action-btn action-primary" @onclick="@(() => Navigation.NavigateTo("/pos"))">
+                        <i class="bi bi-cart-plus"></i>
+                        <span>Nueva Venta</span>
+                    </button>
+
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <button class="action-btn action-secondary" @onclick="@(() => Navigation.NavigateTo("/inventario"))">
+                                <i class="bi bi-clipboard-data"></i>
+                                <span>Inventario</span>
+                            </button>
+                            <button class="action-btn action-secondary" @onclick="@(() => Navigation.NavigateTo("/reportes"))">
+                                <i class="bi bi-file-earmark-bar-graph"></i>
+                                <span>Reportes</span>
+                            </button>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <button class="action-btn action-light" @onclick="@(() => Navigation.NavigateTo("/productos"))">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Productos</span>
+                    </button>
+                    <button class="action-btn action-light" @onclick="@(() => Navigation.NavigateTo("/clientes"))">
+                        <i class="bi bi-people"></i>
+                        <span>Clientes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--slate-900);
+        margin: 0;
+    }
+
+    .dashboard-header p {
+        margin: 0.25rem 0 0 0;
+        font-size: 0.9rem;
+    }
+
+    .header-date {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--slate-500);
+        font-size: 0.9rem;
+        text-transform: capitalize;
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem;
+    }
+
+    /* KPI Cards - Estilo Legacy */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    @@media (max-width: 992px) {
+        .kpi-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .kpi-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .kpi-card-legacy {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .kpi-card-legacy:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    .kpi-icon-wrapper {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-content {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .kpi-value {
+        font-weight: 700;
+        color: var(--slate-900);
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* Escala automática según viewport */
+        font-size: clamp(1rem, 4vw, 1.5rem);
+    }
+
+    .kpi-label {
+        font-size: 0.85rem;
+        color: var(--slate-500);
+        font-weight: 500;
+    }
+
+    /* Ajustes responsivos para KPI en Dashboard */
+    @@media (max-width: 400px) {
+        .kpi-value {
+            font-size: clamp(0.9rem, 5vw, 1.1rem);
+        }
+    }
+
+    @@media (min-width: 768px) {
+        .kpi-value {
+            font-size: clamp(1.1rem, 2vw, 1.5rem);
+        }
+    }
+
+    @@media (min-width: 1200px) {
+        .kpi-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* Colores KPI - Legacy */
+    .kpi-teal .kpi-icon-wrapper {
+        background: #e0f7f4;
+        color: #1abc9c;
+    }
+
+    .kpi-blue .kpi-icon-wrapper {
+        background: #e3f2fd;
+        color: #3498db;
+    }
+
+    .kpi-yellow .kpi-icon-wrapper {
+        background: #fff8e1;
+        color: #f1c40f;
+    }
+
+    .kpi-red .kpi-icon-wrapper {
+        background: #ffebee;
+        color: #e74c3c;
+    }
+
+    .kpi-green .kpi-icon-wrapper {
+        background: #e8f5e9;
+        color: #27ae60;
+    }
+
+    /* Contenido principal */
+    .dashboard-content {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 992px) {
+        .dashboard-content {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--slate-700);
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .section-header i {
+        color: var(--primary-color);
+    }
+
+    /* Gráfico */
+    .chart-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .chart-wrapper {
+        min-height: 280px;
+    }
+
+    .no-data {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 280px;
+        color: var(--slate-400);
+    }
+
+    .no-data i {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Accesos rápidos */
+    .quick-actions {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .actions-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+        text-align: left;
+    }
+
+    .action-btn i {
+        font-size: 1.1rem;
+    }
+
+    .action-primary {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .action-primary:hover {
+        background: var(--primary-dark);
+        transform: translateX(4px);
+    }
+
+    .action-secondary {
+        background: var(--slate-100);
+        color: var(--slate-700);
+    }
+
+    .action-secondary:hover {
+        background: var(--slate-200);
+        transform: translateX(4px);
+    }
+
+    .action-light {
+        background: var(--slate-50);
+        color: var(--slate-600);
+        border: 1px solid var(--slate-200);
+    }
+
+    .action-light:hover {
+        background: var(--slate-100);
+        transform: translateX(4px);
+    }
+
+    /* Sección de información para vendedores */
+    .vendor-info-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .info-card .section-header {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--slate-100);
+    }
+
+    .info-card-body {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .product-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .product-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--slate-50);
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+
+    .product-item:hover {
+        background: var(--slate-100);
+    }
+
+    .product-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-name {
+        font-weight: 500;
+        color: var(--slate-800);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9rem;
+    }
+
+    .product-code {
+        font-size: 0.75rem;
+        color: var(--slate-500);
+    }
+
+    .stock-badge {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+
+    .stock-low {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .stock-critical {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .sales-badge {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--slate-600);
+        white-space: nowrap;
+    }
+
+    .product-rank {
+        flex-shrink: 0;
+    }
+
+    .rank-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: var(--slate-200);
+        color: var(--slate-600);
+    }
+
+    .rank-1 {
+        background: #ffd700;
+        color: #7a6200;
+    }
+
+    .rank-2 {
+        background: #c0c0c0;
+        color: #555;
+    }
+
+    .rank-3 {
+        background: #cd7f32;
+        color: #fff;
+    }
+
+    .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1.5rem;
+        color: var(--slate-500);
+        font-size: 0.9rem;
+    }
+
+    .empty-state i {
+        font-size: 1.25rem;
+    }
+
+    @@media (max-width: 576px) {
+        .info-card-body {
+            max-height: 200px;
+        }
+
+        .product-name {
+            font-size: 0.85rem;
+        }
+
+        .stock-badge, .sales-badge {
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
+@code {
+    private DashboardResumen? resumen;
+    private List<ProductoStockBajo>? productosStockBajo;
+    private List<ProductoTop>? productosTop;
+    private bool isLoading = true;
+    private ApexChartOptions<VentaDiaria> chartOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureChart();
+        await LoadData();
+    }
+
+    private void ConfigureChart()
+    {
+        chartOptions = new ApexChartOptions<VentaDiaria>
+        {
+            Chart = new Chart
+            {
+                Toolbar = new Toolbar { Show = false },
+                Zoom = new Zoom { Enabled = false }
+            },
+            Stroke = new Stroke
+            {
+                Curve = Curve.Smooth,
+                Width = 3
+            },
+            Colors = new List<string> { "#4f46e5" },
+            Markers = new Markers
+            {
+                Size = 5,
+                Colors = new List<string> { "#4f46e5" },
+                StrokeColors = "#fff",
+                StrokeWidth = 2
+            },
+            Grid = new Grid
+            {
+                BorderColor = "#e2e8f0",
+                StrokeDashArray = 4
+            },
+            Xaxis = new XAxis
+            {
+                Labels = new XAxisLabels
+                {
+                    Style = new AxisLabelStyle { FontSize = "12px", Colors = "#64748b" }
+                }
+            },
+            Yaxis = new List<YAxis>
+            {
+                new YAxis
+                {
+                    Labels = new YAxisLabels
+                    {
+                        Formatter = "function(val) { return '$' + val.toLocaleString('es-AR'); }",
+                        Style = new AxisLabelStyle { FontSize = "12px", Colors = "#64748b" }
+                    }
+                }
+            },
+            Tooltip = new Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = "function(val) { return '$' + val.toLocaleString('es-AR'); }"
+                }
+            }
+        };
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            // Cargar datos en paralelo
+            var resumenTask = DashboardService.GetResumenAsync();
+            var stockBajoTask = DashboardService.GetProductosStockBajoAsync();
+            var productosTopTask = DashboardService.GetProductosTopAsync();
+
+            await Task.WhenAll(resumenTask, stockBajoTask, productosTopTask);
+
+            var response = await resumenTask;
+            if (response.Success && response.Data != null)
+            {
+                resumen = response.Data;
+            }
+            else
+            {
+                // Fallback con datos vacíos
+                resumen = new DashboardResumen
+                {
+                    VentasHoy = 0,
+                    TransaccionesHoy = 0,
+                    ProductosActivos = 0,
+                    ProductosBajoStock = 0,
+                    VentasUltimos7Dias = GenerateEmptyWeekData()
+                };
+                // Mostrar el mensaje de error real para diagnostico
+                var errorMsg = !string.IsNullOrEmpty(response.Message)
+                    ? response.Message
+                    : "No se pudieron cargar datos reales del servidor";
+                ToastService.ShowWarning(errorMsg);
+            }
+
+            // Cargar datos para vendedores
+            var stockBajoResponse = await stockBajoTask;
+            if (stockBajoResponse.Success && stockBajoResponse.Data != null)
+            {
+                productosStockBajo = stockBajoResponse.Data;
+            }
+
+            var productosTopResponse = await productosTopTask;
+            if (productosTopResponse.Success && productosTopResponse.Data != null)
+            {
+                productosTop = productosTopResponse.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            resumen = new DashboardResumen
+            {
+                VentasHoy = 0,
+                TransaccionesHoy = 0,
+                ProductosActivos = 0,
+                ProductosBajoStock = 0,
+                VentasUltimos7Dias = GenerateEmptyWeekData()
+            };
+            ToastService.ShowError($"Error de conexión: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<VentaDiaria> GenerateEmptyWeekData()
+    {
+        return Enumerable.Range(0, 7)
+            .Select(i => new VentaDiaria
+            {
+                Fecha = DateTime.Today.AddDays(-6 + i),
+                Total = 0,
+                CantidadVentas = 0
+            })
+            .ToList();
+    }
+
+    private string FormatCurrency(decimal value)
+    {
+        return FormatHelper.FormatCurrencyNoDecimals(value);
+    }
+}

@@ -1,0 +1,655 @@
+@page "/clientes"
+@attribute [Authorize]
+@using PuntoDeVenta.Web.Services
+@inject IClienteService ClienteService
+@inject IToastService ToastService
+
+<PageTitle>Clientes - Gestión POS</PageTitle>
+
+<PageHeader Title="Clientes" Subtitle="Gestión de clientes">
+    <ActionContent>
+        <button class="btn btn-primary" @onclick="ShowCreateModal">
+            <i class="bi bi-plus-lg me-2"></i>
+            Nuevo Cliente
+        </button>
+    </ActionContent>
+</PageHeader>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Buscar por nombre o documento..."
+                           @bind="searchTerm"
+                           @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <select class="form-select" @bind="filterActivo">
+                    <option value="">Todos</option>
+                    <option value="true">Activos</option>
+                    <option value="false">Inactivos</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <LoadingSpinner IsLoading="true" Message="Cargando clientes..." />
+}
+else if (!FilteredClientes.Any())
+{
+    <EmptyState Title="Sin clientes"
+                Message="No se encontraron clientes."
+                IconClass="bi-people">
+        <ActionContent>
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-lg me-2"></i>
+                Crear Cliente
+            </button>
+        </ActionContent>
+    </EmptyState>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-to-cards mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Documento</th>
+                            <th>Razón Social</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th class="d-none d-lg-table-cell">Domicilio</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cliente in FilteredClientes)
+                        {
+                            <tr>
+                                <td data-label="Documento">
+                                    <code>@cliente.Documento</code>
+                                </td>
+                                <td data-label="Razón Social">
+                                    <strong>@cliente.RazonSocial</strong>
+                                </td>
+                                <td data-label="Teléfono">
+                                    @if (!string.IsNullOrEmpty(cliente.Telefono))
+                                    {
+                                        <i class="bi bi-telephone me-1"></i>
+                                        @cliente.Telefono
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td data-label="Email">
+                                    @if (!string.IsNullOrEmpty(cliente.Email))
+                                    {
+                                        <i class="bi bi-envelope me-1"></i>
+                                        @cliente.Email
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td data-label="Domicilio" class="d-none d-lg-table-cell">
+                                    @if (!string.IsNullOrEmpty(cliente.Domicilio))
+                                    {
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        @cliente.Domicilio
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td data-label="Estado">
+                                    @if (cliente.Activo)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    }
+                                </td>
+                                <td data-label="Acciones" class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" @onclick="() => ShowDetailModal(cliente)" title="Ver Detalle">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        @if (cliente.IdCliente != 1) @* Proteger Consumidor Final *@
+                                        {
+                                            <AuthorizeView Roles="Admin">
+                                                <Authorized>
+                                                    <button class="btn btn-outline-primary" @onclick="() => ShowEditModal(cliente)" title="Editar">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if (cliente.Activo)
+                                                    {
+                                                        <button class="btn btn-outline-danger" @onclick="() => ShowDeleteConfirm(cliente)" title="Desactivar">
+                                                            <i class="bi bi-x-circle"></i>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-outline-success" @onclick="() => ActivarCliente(cliente)" title="Activar">
+                                                            <i class="bi bi-check-circle"></i>
+                                                        </button>
+                                                    }
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Create/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi @(isEditing ? "bi-pencil" : "bi-plus-lg") me-2"></i>
+                        @(isEditing ? "Editar Cliente" : "Nuevo Cliente")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="@formModel" OnValidSubmit="SaveCliente">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Razón Social *</label>
+                            <InputText @bind-Value="formModel.RazonSocial" class="form-control" />
+                            <ValidationMessage For="@(() => formModel.RazonSocial)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Documento *</label>
+                            <InputText @bind-Value="formModel.Documento" class="form-control" />
+                            <ValidationMessage For="@(() => formModel.Documento)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <InputText @bind-Value="formModel.Telefono" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText @bind-Value="formModel.Email" class="form-control" type="email" />
+                            <ValidationMessage For="@(() => formModel.Email)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Domicilio</label>
+                            <InputText @bind-Value="formModel.Domicilio" class="form-control" placeholder="Dirección del cliente" />
+                        </div>
+                        @if (isEditing && editingId != 1)
+                        {
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="switchActivo" @bind="formModelActivo" />
+                                    <label class="form-check-label" for="switchActivo">
+                                        @if (formModelActivo)
+                                        {
+                                            <span class="text-success fw-bold">Cliente Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-secondary">Cliente Inactivo</span>
+                                        }
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-lg me-2"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Detail Modal -->
+@if (showDetailModal && detailCliente != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-circle me-2"></i>
+                        Detalle del Cliente
+                        @if (detailEstadisticas?.EsFrecuente == true)
+                        {
+                            <span class="badge bg-warning text-dark ms-2">
+                                <i class="bi bi-star-fill me-1"></i>Frecuente
+                            </span>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showDetailModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-8">
+                            <label class="form-label text-muted small">Razón Social</label>
+                            <p class="mb-0 fw-bold fs-5">@detailCliente.RazonSocial</p>
+                        </div>
+                        <div class="col-4 text-end">
+                            @if (detailCliente.Activo)
+                            {
+                                <span class="badge bg-success fs-6">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary fs-6">Inactivo</span>
+                            }
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Documento</label>
+                            <p class="mb-0"><code class="fs-5">@detailCliente.Documento</code></p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Fecha de Alta</label>
+                            <p class="mb-0">@detailCliente.FechaAlta.ToString("dd/MM/yyyy")</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Teléfono</label>
+                            @if (!string.IsNullOrEmpty(detailCliente.Telefono))
+                            {
+                                <p class="mb-0"><i class="bi bi-telephone me-1"></i>@detailCliente.Telefono</p>
+                            }
+                            else
+                            {
+                                <p class="mb-0 text-muted">No registrado</p>
+                            }
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Email</label>
+                            @if (!string.IsNullOrEmpty(detailCliente.Email))
+                            {
+                                <p class="mb-0"><i class="bi bi-envelope me-1"></i>@detailCliente.Email</p>
+                            }
+                            else
+                            {
+                                <p class="mb-0 text-muted">No registrado</p>
+                            }
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Domicilio</label>
+                            @if (!string.IsNullOrEmpty(detailCliente.Domicilio))
+                            {
+                                <p class="mb-0"><i class="bi bi-geo-alt me-1"></i>@detailCliente.Domicilio</p>
+                            }
+                            else
+                            {
+                                <p class="mb-0 text-muted">No registrado</p>
+                            }
+                        </div>
+
+                        @* Estadísticas e Historial (excepto Consumidor Final) *@
+                        @if (detailCliente.IdCliente != 1)
+                        {
+                            <div class="col-12">
+                                <hr class="my-2" />
+                            </div>
+
+                            @if (isLoadingDetail)
+                            {
+                                <div class="col-12 text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span class="ms-2">Cargando estadísticas...</span>
+                                </div>
+                            }
+                            else if (detailEstadisticas != null)
+                            {
+                                <div class="col-12">
+                                    <div class="row g-2">
+                                        <div class="col-4">
+                                            <div class="bg-light rounded p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                                                <div class="fs-4 fw-bold text-primary mb-1">@detailEstadisticas.TotalCompras</div>
+                                                <small class="text-muted">Compras</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="bg-light rounded p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                                                <div class="fs-5 fw-bold text-success mb-1">@FormatHelper.FormatCurrencyNoDecimals(detailEstadisticas.MontoAcumulado)</div>
+                                                <small class="text-muted">Total</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="bg-light rounded p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                                                <div class="fs-5 fw-bold mb-1">@(detailEstadisticas.UltimaCompra?.ToString("dd/MM/yy") ?? "-")</div>
+                                                <small class="text-muted">Última compra</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (detailCompras.Any())
+                                {
+                                    <div class="col-12">
+                                        <label class="form-label text-muted small mb-2">Últimas compras</label>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Factura</th>
+                                                        <th>Fecha</th>
+                                                        <th class="text-end">Monto</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var compra in detailCompras)
+                                                    {
+                                                        <tr class="@(compra.Cancelada ? "text-decoration-line-through text-muted" : "")">
+                                                            <td><code>@compra.NoFactura</code></td>
+                                                            <td>@FormatHelper.FormatDateTime(compra.Fecha)</td>
+                                                            <td class="text-end fw-bold">@FormatHelper.FormatCurrencyNoDecimals(compra.Monto)</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="col-12 text-center text-muted py-2">
+                                        <i class="bi bi-cart-x me-1"></i>
+                                        Sin compras registradas
+                                    </div>
+                                }
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDetailModal = false">
+                        Cerrar
+                    </button>
+                    @if (detailCliente.IdCliente != 1)
+                    {
+                        <AuthorizeView Roles="Admin">
+                            <Authorized>
+                                <button type="button" class="btn btn-primary" @onclick="() => { showDetailModal = false; ShowEditModal(detailCliente); }">
+                                    <i class="bi bi-pencil me-2"></i>Editar
+                                </button>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Deactivate Confirm Dialog -->
+<ConfirmDialog IsVisible="@showDeleteDialog"
+               Title="Desactivar Cliente"
+               Message="@($"¿Está seguro de desactivar el cliente '{selectedCliente?.RazonSocial}'? Podrá reactivarlo posteriormente.")"
+               ConfirmText="Desactivar"
+               ConfirmButtonClass="btn-danger"
+               IconClass="bi-x-circle"
+               OnConfirm="DeleteCliente"
+               OnCancel="() => showDeleteDialog = false" />
+
+@code {
+    private List<ClienteDTO> clientes = new();
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool showDeleteDialog = false;
+    private bool showDetailModal = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+
+    private string searchTerm = "";
+    private string filterActivo = "";
+
+    private ClienteCreateDTO formModel = new();
+    private ClienteDTO? selectedCliente;
+    private ClienteDTO? detailCliente;
+    private int? editingId;
+    private bool formModelActivo = true;
+
+    // Para estadísticas e historial (solo en modal de detalle)
+    private ClienteEstadisticasDTO? detailEstadisticas;
+    private List<ClienteCompraDTO> detailCompras = new();
+    private bool isLoadingDetail = false;
+
+    private IEnumerable<ClienteDTO> FilteredClientes => clientes.Where(c =>
+        (string.IsNullOrWhiteSpace(searchTerm) ||
+         c.RazonSocial.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+         c.Documento.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(filterActivo) || c.Activo.ToString().ToLower() == filterActivo.ToLower())
+    );
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        var response = await ClienteService.GetAllAsync();
+
+        if (response.Success && response.Data != null)
+        {
+            clientes = response.Data;
+            // Nota: estadisticas se cargan solo al abrir el modal de detalle (ShowDetailModal)
+        }
+
+        isLoading = false;
+    }
+
+    private void ShowCreateModal()
+    {
+        isEditing = false;
+        editingId = null;
+        formModel = new ClienteCreateDTO();
+        showModal = true;
+    }
+
+    private void ShowEditModal(ClienteDTO cliente)
+    {
+        isEditing = true;
+        editingId = cliente.IdCliente;
+        formModelActivo = cliente.Activo;
+        formModel = new ClienteCreateDTO
+        {
+            RazonSocial = cliente.RazonSocial,
+            Documento = cliente.Documento,
+            Telefono = cliente.Telefono,
+            Email = cliente.Email,
+            Domicilio = cliente.Domicilio
+        };
+        showModal = true;
+    }
+
+    private async Task ShowDetailModal(ClienteDTO cliente)
+    {
+        detailCliente = cliente;
+        detailEstadisticas = null;
+        detailCompras = new();
+        showDetailModal = true;
+
+        // Cargar estadísticas e historial (excepto Consumidor Final)
+        if (cliente.IdCliente != 1)
+        {
+            isLoadingDetail = true;
+            StateHasChanged();
+
+            var statsTask = ClienteService.GetEstadisticasAsync(cliente.IdCliente);
+            var comprasTask = ClienteService.GetComprasAsync(cliente.IdCliente, 5);
+
+            await Task.WhenAll(statsTask, comprasTask);
+
+            var statsResponse = await statsTask;
+            var comprasResponse = await comprasTask;
+
+            if (statsResponse.Success && statsResponse.Data != null)
+            {
+                detailEstadisticas = statsResponse.Data;
+            }
+
+            if (comprasResponse.Success && comprasResponse.Data != null)
+            {
+                detailCompras = comprasResponse.Data;
+            }
+
+            isLoadingDetail = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formModel = new ClienteCreateDTO();
+    }
+
+    private void ShowDeleteConfirm(ClienteDTO cliente)
+    {
+        selectedCliente = cliente;
+        showDeleteDialog = true;
+    }
+
+    private async Task SaveCliente()
+    {
+        isSaving = true;
+
+        try
+        {
+            if (isEditing && editingId.HasValue)
+            {
+                var updateDto = new ClienteUpdateDTO
+                {
+                    RazonSocial = formModel.RazonSocial,
+                    Documento = formModel.Documento,
+                    Telefono = formModel.Telefono,
+                    Email = formModel.Email,
+                    Domicilio = formModel.Domicilio,
+                    Activo = formModelActivo
+                };
+
+                var response = await ClienteService.UpdateAsync(editingId.Value, updateDto);
+
+                if (response.Success)
+                {
+                    ToastService.ShowSuccess("Cliente actualizado correctamente");
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    ToastService.ShowError(response.Message ?? "Error al actualizar");
+                }
+            }
+            else
+            {
+                var response = await ClienteService.CreateAsync(formModel);
+
+                if (response.Success)
+                {
+                    ToastService.ShowSuccess("Cliente creado correctamente");
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    ToastService.ShowError(response.Message ?? "Error al crear");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteCliente()
+    {
+        showDeleteDialog = false;
+
+        if (selectedCliente == null) return;
+
+        try
+        {
+            var response = await ClienteService.CambiarEstadoAsync(selectedCliente.IdCliente, false);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess("Cliente desactivado correctamente");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al desactivar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+    }
+
+    private async Task ActivarCliente(ClienteDTO cliente)
+    {
+        try
+        {
+            var response = await ClienteService.CambiarEstadoAsync(cliente.IdCliente, true);
+
+            if (response.Success)
+            {
+                ToastService.ShowSuccess($"Cliente '{cliente.RazonSocial}' activado");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(response.Message ?? "Error al activar");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+    }
+}

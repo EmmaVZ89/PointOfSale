@@ -1,0 +1,1149 @@
+@page "/reportes"
+@attribute [Authorize(Roles = "Admin")]
+@using PuntoDeVenta.Web.Services
+@inject IVentaService VentaService
+@inject IProductoService ProductoService
+@inject IClienteService ClienteService
+@inject IToastService ToastService
+@inject IJSRuntime JS
+
+<PageTitle>Reportes - Gestión POS</PageTitle>
+
+<PageHeader Title="Reportes" Subtitle="Reportes y estadísticas del negocio" />
+
+<!-- Report Type Selector -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card h-100 border-0 shadow-sm cursor-pointer report-card @(selectedReport == "ventas" ? "selected" : "")"
+             @onclick='() => SelectReport("ventas")'>
+            <div class="card-body text-center py-4">
+                <div class="report-icon mb-2 @(selectedReport == "ventas" ? "bg-primary" : "bg-light")">
+                    <i class="bi bi-cart-check @(selectedReport == "ventas" ? "text-white" : "text-primary")"></i>
+                </div>
+                <h6 class="mb-0 @(selectedReport == "ventas" ? "text-primary" : "")">Ventas</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card h-100 border-0 shadow-sm cursor-pointer report-card @(selectedReport == "top" ? "selected" : "")"
+             @onclick='() => SelectReport("top")'>
+            <div class="card-body text-center py-4">
+                <div class="report-icon mb-2 @(selectedReport == "top" ? "bg-warning" : "bg-light")">
+                    <i class="bi bi-trophy @(selectedReport == "top" ? "text-white" : "text-warning")"></i>
+                </div>
+                <h6 class="mb-0 @(selectedReport == "top" ? "text-warning" : "")">Top Productos</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card h-100 border-0 shadow-sm cursor-pointer report-card @(selectedReport == "productos" ? "selected" : "")"
+             @onclick='() => SelectReport("productos")'>
+            <div class="card-body text-center py-4">
+                <div class="report-icon mb-2 @(selectedReport == "productos" ? "bg-success" : "bg-light")">
+                    <i class="bi bi-box-seam @(selectedReport == "productos" ? "text-white" : "text-success")"></i>
+                </div>
+                <h6 class="mb-0 @(selectedReport == "productos" ? "text-success" : "")">Productos</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card h-100 border-0 shadow-sm cursor-pointer report-card @(selectedReport == "stock" ? "selected" : "")"
+             @onclick='() => SelectReport("stock")'>
+            <div class="card-body text-center py-4">
+                <div class="report-icon mb-2 @(selectedReport == "stock" ? "bg-danger" : "bg-light")">
+                    <i class="bi bi-exclamation-triangle @(selectedReport == "stock" ? "text-white" : "text-danger")"></i>
+                </div>
+                <h6 class="mb-0 @(selectedReport == "stock" ? "text-danger" : "")">Stock Bajo</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card h-100 border-0 shadow-sm cursor-pointer report-card @(selectedReport == "clientes" ? "selected" : "")"
+             @onclick='() => SelectReport("clientes")'>
+            <div class="card-body text-center py-4">
+                <div class="report-icon mb-2 @(selectedReport == "clientes" ? "bg-info" : "bg-light")">
+                    <i class="bi bi-people @(selectedReport == "clientes" ? "text-white" : "text-info")"></i>
+                </div>
+                <h6 class="mb-0 @(selectedReport == "clientes" ? "text-info" : "")">Clientes</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+@switch (selectedReport)
+{
+    case "ventas":
+        <!-- Ventas Report -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-transparent">
+                <i class="bi bi-funnel me-2"></i>
+                Filtros de Ventas
+            </div>
+            <div class="card-body">
+                <!-- Date Presets -->
+                <div class="mb-3">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn @(IsPresetActive("hoy") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("hoy")'>Hoy</button>
+                        <button class="btn @(IsPresetActive("semana") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("semana")'>Esta Semana</button>
+                        <button class="btn @(IsPresetActive("mes") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("mes")'>Este Mes</button>
+                        <button class="btn @(IsPresetActive("30dias") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("30dias")'>Últimos 30 días</button>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-end">
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label">Desde</label>
+                        <input type="date" class="form-control" @bind="ventaFiltro.FechaDesde" />
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" class="form-control" @bind="ventaFiltro.FechaHasta" />
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label">Cliente</label>
+                        <select class="form-select" @bind="ventaFiltro.IdCliente">
+                            <option value="0">Todos</option>
+                            @foreach (var cliente in clientes)
+                            {
+                                <option value="@cliente.IdCliente">@cliente.RazonSocial</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" @bind="ventaFiltro.Estado">
+                            <option value="">Todos</option>
+                            <option value="COMPLETADA">Completadas</option>
+                            <option value="CANCELADA">Canceladas</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-primary" @onclick="LoadVentas">
+                                <i class="bi bi-search me-1"></i>
+                                Buscar
+                            </button>
+                            <button class="btn btn-outline-success" @onclick="ExportVentasExcel" disabled="@(!ventas.Any())">
+                                <i class="bi bi-file-earmark-excel me-1"></i>
+                                Excel
+                            </button>
+                            <button class="btn btn-outline-danger" @onclick="ExportVentasPDF" disabled="@(!ventas.Any())">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>
+                                PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <LoadingSpinner IsLoading="true" />
+        }
+        else if (ventas.Any())
+        {
+            <!-- Summary KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-receipt text-primary fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Total Ventas</h6>
+                                    <div class="kpi-value-responsive">@ventas.Count</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-currency-dollar text-success fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Ingresos</h6>
+                                    <div class="kpi-value-currency text-success">@FormatHelper.FormatCurrencyNoDecimals(ventas.Where(v => v.Estado != "CANCELADA").Sum(v => v.Total))</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-graph-up text-info fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Promedio</h6>
+                                    <div class="kpi-value-currency text-info">@FormatHelper.FormatCurrencyNoDecimals(ventas.Where(v => v.Estado != "CANCELADA").DefaultIfEmpty().Average(v => v?.Total ?? 0))</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-danger bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-x-circle text-danger fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Canceladas</h6>
+                                    <div class="kpi-value-responsive text-danger">@ventas.Count(v => v.Estado == "CANCELADA")</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-to-cards mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Factura</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Usuario</th>
+                                    <th class="text-end">Total</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var venta in ventas)
+                                {
+                                    <tr class="@(venta.Estado == "CANCELADA" ? "table-danger" : "")">
+                                        <td data-label="Factura"><code>@venta.NoFactura</code></td>
+                                        <td data-label="Fecha">@venta.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td data-label="Cliente">@(venta.ClienteNombre ?? "Consumidor Final")</td>
+                                        <td data-label="Usuario">@venta.UsuarioNombre</td>
+                                        <td data-label="Total" class="text-end fw-bold">@FormatHelper.FormatCurrencyNoDecimals(venta.Total)</td>
+                                        <td data-label="Estado">
+                                            <span class="badge @(venta.Estado == "COMPLETADA" ? "bg-success" : "bg-danger")">
+                                                <i class="bi @(venta.Estado == "COMPLETADA" ? "bi-check-circle" : "bi-x-circle") me-1"></i>
+                                                @venta.Estado
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <EmptyState Title="Sin ventas"
+                        Message="No se encontraron ventas con los filtros aplicados."
+                        IconClass="bi-cart" />
+        }
+        break;
+
+    case "top":
+        <!-- Top Productos Report -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-transparent">
+                <i class="bi bi-funnel me-2"></i>
+                Filtros de Top Productos
+            </div>
+            <div class="card-body">
+                <!-- Date Presets -->
+                <div class="mb-3">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn @(IsPresetActive("hoy") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("hoy")'>Hoy</button>
+                        <button class="btn @(IsPresetActive("semana") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("semana")'>Esta Semana</button>
+                        <button class="btn @(IsPresetActive("mes") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("mes")'>Este Mes</button>
+                        <button class="btn @(IsPresetActive("30dias") ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetDatePreset("30dias")'>Últimos 30 días</button>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-end">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Desde</label>
+                        <input type="date" class="form-control" @bind="ventaFiltro.FechaDesde" />
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" class="form-control" @bind="ventaFiltro.FechaHasta" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="btn-group">
+                            <button class="btn btn-primary" @onclick="LoadTopProductos">
+                                <i class="bi bi-search me-1"></i>
+                                Generar Ranking
+                            </button>
+                            <button class="btn btn-outline-success" @onclick="ExportTopExcel" disabled="@(!topProductos.Any())">
+                                <i class="bi bi-file-earmark-excel me-1"></i>
+                                Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <LoadingSpinner IsLoading="true" />
+        }
+        else if (topProductos.Any())
+        {
+            <div class="row g-4">
+                <!-- Chart -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-transparent">
+                            <i class="bi bi-bar-chart me-2"></i>
+                            Top 10 Productos Más Vendidos
+                        </div>
+                        <div class="card-body">
+                            <ApexChart TItem="TopProductoVentaDTO"
+                                       Options="chartOptionsTopBar"
+                                       Height="350">
+                                <ApexPointSeries TItem="TopProductoVentaDTO"
+                                                 Items="topProductos.Take(10).ToList()"
+                                                 SeriesType="SeriesType.Bar"
+                                                 Name="Unidades Vendidas"
+                                                 XValue="@(e => e.Nombre.Length > 20 ? e.Nombre.Substring(0, 20) + "..." : e.Nombre)"
+                                                 YValue="@(e => e.CantidadVendida)" />
+                            </ApexChart>
+                        </div>
+                    </div>
+                </div>
+                <!-- Table -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-transparent">
+                            <i class="bi bi-trophy me-2"></i>
+                            Ranking Detallado
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">#</th>
+                                            <th>Producto</th>
+                                            <th class="text-end">Vendidos</th>
+                                            <th class="text-end">Ingresos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{ int ranking = 1; }
+                                        @foreach (var prod in topProductos.Take(10))
+                                        {
+                                            <tr>
+                                                <td class="text-center">
+                                                    @if (ranking <= 3)
+                                                    {
+                                                        <span class="badge @(ranking == 1 ? "bg-warning" : ranking == 2 ? "bg-secondary" : "bg-danger")">
+                                                            <i class="bi bi-trophy-fill"></i> @ranking
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">@ranking</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <strong>@prod.Nombre</strong>
+                                                    <br /><code class="small">@prod.Codigo</code>
+                                                </td>
+                                                <td class="text-end"><strong>@prod.CantidadVendida</strong></td>
+                                                <td class="text-end text-success fw-bold">@FormatHelper.FormatCurrencyNoDecimals(prod.TotalIngresos)</td>
+                                            </tr>
+                                            ranking++;
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <EmptyState Title="Sin datos"
+                        Message="Genera el ranking para ver los productos más vendidos."
+                        IconClass="bi-trophy" />
+        }
+        break;
+
+    case "productos":
+        <!-- Productos Report -->
+        @if (isLoading)
+        {
+            <LoadingSpinner IsLoading="true" />
+        }
+        else
+        {
+            <!-- KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-box-seam text-primary fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Total Productos</h6>
+                                    <div class="kpi-value-responsive">@productos.Count</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-check-circle text-success fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Activos</h6>
+                                    <div class="kpi-value-responsive text-success">@productos.Count(p => p.Activo)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-secondary bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-pause-circle text-secondary fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Inactivos</h6>
+                                    <div class="kpi-value-responsive">@productos.Count(p => !p.Activo)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-currency-dollar text-warning fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Valor Inventario</h6>
+                                    <div class="kpi-value-currency text-warning">@FormatHelper.FormatCurrencyNoDecimals(productos.Sum(p => p.Precio * p.Cantidad))</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export buttons -->
+            <div class="d-flex justify-content-end gap-2 mb-3">
+                <button class="btn btn-outline-success btn-sm" @onclick="ExportProductosExcel">
+                    <i class="bi bi-file-earmark-excel me-1"></i>
+                    Exportar Excel
+                </button>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <i class="bi bi-box-seam me-2"></i>
+                    Stock Valorizado
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-to-cards mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th class="text-end">Precio</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Valor Total</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var producto in productos.OrderByDescending(p => p.Precio * p.Cantidad))
+                                {
+                                    <tr class="@(!producto.Activo ? "table-secondary" : "")">
+                                        <td data-label="Código"><code>@producto.Codigo</code></td>
+                                        <td data-label="Nombre">@producto.Nombre</td>
+                                        <td data-label="Precio" class="text-end">@FormatHelper.FormatCurrency(producto.Precio)</td>
+                                        <td data-label="Stock" class="text-end">
+                                            <strong class="@(producto.Cantidad <= 0 ? "text-danger" : producto.Cantidad < 10 ? "text-warning" : "")">
+                                                @producto.Cantidad
+                                            </strong>
+                                        </td>
+                                        <td data-label="Valor" class="text-end fw-bold">@FormatHelper.FormatCurrencyNoDecimals(producto.Precio * producto.Cantidad)</td>
+                                        <td data-label="Estado">
+                                            <span class="badge @(producto.Activo ? "bg-success" : "bg-secondary")">
+                                                @(producto.Activo ? "Activo" : "Inactivo")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+        break;
+
+    case "stock":
+        <!-- Stock Bajo Report -->
+        @if (isLoading)
+        {
+            <LoadingSpinner IsLoading="true" />
+        }
+        else
+        {
+            var stockBajo = productos.Where(p => p.Cantidad < 10 && p.Activo).OrderBy(p => p.Cantidad).ToList();
+            var sinStock = stockBajo.Count(p => p.Cantidad == 0);
+
+            <!-- KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Stock Bajo (&lt;10)</h6>
+                                    <div class="kpi-value-responsive text-warning">@stockBajo.Count</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-danger bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-x-circle text-danger fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Sin Stock</h6>
+                                    <div class="kpi-value-responsive text-danger">@sinStock</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100 @(stockBajo.Any() ? "border-warning" : "border-success")" style="border-width: 2px !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="@(stockBajo.Any() ? "bg-warning" : "bg-success") bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi @(stockBajo.Any() ? "bi-exclamation-circle text-warning" : "bi-check-circle text-success") fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    @if (stockBajo.Any())
+                                    {
+                                        <h6 class="text-warning mb-1">Atención Requerida</h6>
+                                        <small class="text-muted">@stockBajo.Count productos necesitan reposición</small>
+                                    }
+                                    else
+                                    {
+                                        <h6 class="text-success mb-1">Todo en Orden</h6>
+                                        <small class="text-muted">Todos los productos tienen stock suficiente</small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (stockBajo.Any())
+            {
+                <!-- Export button -->
+                <div class="d-flex justify-content-end gap-2 mb-3">
+                    <button class="btn btn-outline-success btn-sm" @onclick="ExportStockBajoExcel">
+                        <i class="bi bi-file-earmark-excel me-1"></i>
+                        Exportar Excel
+                    </button>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Productos con Stock Bajo
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-to-cards mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th class="text-end">Stock Actual</th>
+                                        <th>Urgencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var producto in stockBajo)
+                                    {
+                                        <tr class="@(producto.Cantidad == 0 ? "table-danger" : "table-warning")">
+                                            <td data-label="Código"><code>@producto.Codigo</code></td>
+                                            <td data-label="Nombre">@producto.Nombre</td>
+                                            <td data-label="Stock" class="text-end fw-bold">@producto.Cantidad</td>
+                                            <td data-label="Urgencia">
+                                                @if (producto.Cantidad == 0)
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        <i class="bi bi-x-circle me-1"></i>Sin Stock
+                                                    </span>
+                                                }
+                                                else if (producto.Cantidad <= 3)
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>Crítico
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="bi bi-exclamation-triangle me-1"></i>Bajo
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        break;
+
+    case "clientes":
+        <!-- Clientes Report -->
+        @if (isLoading)
+        {
+            <LoadingSpinner IsLoading="true" />
+        }
+        else
+        {
+            <!-- KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-people text-primary fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Total Clientes</h6>
+                                    <div class="kpi-value-responsive">@clientes.Count</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-person-check text-success fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Activos</h6>
+                                    <div class="kpi-value-responsive text-success">@clientes.Count(c => c.Activo)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-secondary bg-opacity-10 rounded-3 p-3">
+                                        <i class="bi bi-person-dash text-secondary fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3 overflow-hidden">
+                                    <h6 class="text-muted mb-1 small">Inactivos</h6>
+                                    <div class="kpi-value-responsive">@clientes.Count(c => !c.Activo)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export button -->
+            <div class="d-flex justify-content-end gap-2 mb-3">
+                <button class="btn btn-outline-success btn-sm" @onclick="ExportClientesExcel">
+                    <i class="bi bi-file-earmark-excel me-1"></i>
+                    Exportar Excel
+                </button>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <i class="bi bi-people me-2"></i>
+                    Listado de Clientes
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-to-cards mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Documento</th>
+                                    <th>Razón Social</th>
+                                    <th>Contacto</th>
+                                    <th>Fecha Alta</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cliente in clientes.OrderByDescending(c => c.FechaAlta))
+                                {
+                                    <tr class="@(!cliente.Activo ? "table-secondary" : "")">
+                                        <td data-label="Documento"><code>@cliente.Documento</code></td>
+                                        <td data-label="Razón Social">@cliente.RazonSocial</td>
+                                        <td data-label="Contacto">
+                                            @if (!string.IsNullOrEmpty(cliente.Email))
+                                            {
+                                                <small><i class="bi bi-envelope me-1"></i>@cliente.Email</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(cliente.Telefono))
+                                            {
+                                                <br /><small><i class="bi bi-telephone me-1"></i>@cliente.Telefono</small>
+                                            }
+                                        </td>
+                                        <td data-label="Fecha Alta">@cliente.FechaAlta.ToString("dd/MM/yyyy")</td>
+                                        <td data-label="Estado">
+                                            <span class="badge @(cliente.Activo ? "bg-success" : "bg-secondary")">
+                                                @(cliente.Activo ? "Activo" : "Inactivo")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+        break;
+}
+
+<style>
+    .report-card {
+        transition: all 0.2s ease;
+    }
+    .report-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .report-card.selected {
+        border-width: 2px !important;
+        border-color: var(--bs-primary) !important;
+    }
+    .report-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto;
+        transition: all 0.2s ease;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
+
+@code {
+    private string selectedReport = "ventas";
+    private string activePreset = "30dias";
+    private bool isLoading = false;
+
+    private List<VentaDTO> ventas = new();
+    private List<ProductoDTO> productos = new();
+    private List<ClienteDTO> clientes = new();
+    private List<TopProductoVentaDTO> topProductos = new();
+
+    private VentaFiltroDTO ventaFiltro = new()
+    {
+        FechaDesde = DateTime.Today.AddDays(-30),
+        FechaHasta = DateTime.Today,
+        Page = 1,
+        PageSize = 500
+    };
+
+    // Chart options
+    private ApexChartOptions<TopProductoVentaDTO> chartOptionsTopBar = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitChartOptions();
+        await LoadClientes();
+        await LoadVentas();
+    }
+
+    private void InitChartOptions()
+    {
+        chartOptionsTopBar = new ApexChartOptions<TopProductoVentaDTO>
+        {
+            Chart = new Chart { Toolbar = new Toolbar { Show = false } },
+            Colors = new List<string> { "#ffc107" },
+            PlotOptions = new PlotOptions
+            {
+                Bar = new PlotOptionsBar { Horizontal = true, BorderRadius = 4 }
+            }
+        };
+    }
+
+    private bool IsPresetActive(string preset) => activePreset == preset;
+
+    private void SetDatePreset(string preset)
+    {
+        activePreset = preset;
+        var today = DateTime.Today;
+
+        switch (preset)
+        {
+            case "hoy":
+                ventaFiltro.FechaDesde = today;
+                ventaFiltro.FechaHasta = today;
+                break;
+            case "semana":
+                var startOfWeek = today.AddDays(-(int)today.DayOfWeek + 1);
+                ventaFiltro.FechaDesde = startOfWeek;
+                ventaFiltro.FechaHasta = today;
+                break;
+            case "mes":
+                ventaFiltro.FechaDesde = new DateTime(today.Year, today.Month, 1);
+                ventaFiltro.FechaHasta = today;
+                break;
+            case "30dias":
+                ventaFiltro.FechaDesde = today.AddDays(-30);
+                ventaFiltro.FechaHasta = today;
+                break;
+        }
+    }
+
+    private async Task SelectReport(string report)
+    {
+        selectedReport = report;
+
+        switch (report)
+        {
+            case "ventas":
+                if (!ventas.Any())
+                    await LoadVentas();
+                break;
+            case "top":
+                // Don't auto-load, wait for user to click
+                break;
+            case "productos":
+            case "stock":
+                if (!productos.Any())
+                    await LoadProductos();
+                break;
+            case "clientes":
+                if (!clientes.Any())
+                    await LoadClientes();
+                break;
+        }
+    }
+
+    private async Task LoadVentas()
+    {
+        isLoading = true;
+        activePreset = "";
+
+        try
+        {
+            var response = await VentaService.GetAllAsync(ventaFiltro);
+
+            if (response.Success && response.Data != null)
+            {
+                ventas = response.Data.Items;
+            }
+            else
+            {
+                ventas = new List<VentaDTO>();
+                ToastService.ShowWarning(response.Message ?? "No se pudieron cargar las ventas");
+            }
+        }
+        catch (Exception ex)
+        {
+            ventas = new List<VentaDTO>();
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadTopProductos()
+    {
+        isLoading = true;
+
+        try
+        {
+            var response = await VentaService.GetTopProductosAsync(
+                ventaFiltro.FechaDesde ?? DateTime.Today.AddDays(-30),
+                ventaFiltro.FechaHasta ?? DateTime.Today,
+                10);
+
+            if (response.Success && response.Data != null)
+            {
+                topProductos = response.Data;
+            }
+            else
+            {
+                topProductos = new List<TopProductoVentaDTO>();
+                ToastService.ShowWarning("No se encontraron datos en el periodo seleccionado");
+            }
+        }
+        catch (Exception ex)
+        {
+            topProductos = new List<TopProductoVentaDTO>();
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadProductos()
+    {
+        isLoading = true;
+
+        // Usar GetActivosAsync para consistencia con Inventario
+        var response = await ProductoService.GetActivosAsync();
+
+        if (response.Success && response.Data != null)
+        {
+            productos = response.Data;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadClientes()
+    {
+        var response = await ClienteService.GetAllAsync();
+
+        if (response.Success && response.Data != null)
+        {
+            clientes = response.Data;
+        }
+    }
+
+    // Export Functions - Excel
+    private async Task ExportVentasExcel()
+    {
+        var data = new List<object[]>
+        {
+            new object[] { "Factura", "Fecha", "Cliente", "Usuario", "Total", "Estado" }
+        };
+
+        foreach (var v in ventas)
+        {
+            data.Add(new object[]
+            {
+                v.NoFactura,
+                FormatHelper.FormatDateTime(v.Fecha),
+                v.ClienteNombre ?? "Consumidor Final",
+                v.UsuarioNombre,
+                v.Total,
+                v.Estado
+            });
+        }
+
+        var columnTypes = new[] { "text", "text", "text", "text", "currency", "text" };
+        await JS.InvokeVoidAsync("exportToExcel", data, $"Ventas_{DateTime.Now:yyyyMMdd}", columnTypes);
+        ToastService.ShowSuccess("Archivo Excel exportado");
+    }
+
+    private async Task ExportVentasPDF()
+    {
+        var html = GenerateVentasPDFHtml();
+        await JS.InvokeVoidAsync("printContent", html, "Reporte de Ventas");
+        ToastService.ShowInfo("Abriendo ventana de impresión...");
+    }
+
+    private string GenerateVentasPDFHtml()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<html><head><style>");
+        sb.Append("body { font-family: Arial, sans-serif; font-size: 12px; }");
+        sb.Append("h1 { font-size: 18px; } h2 { font-size: 14px; color: #666; }");
+        sb.Append("table { width: 100%; border-collapse: collapse; margin-top: 10px; }");
+        sb.Append("th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }");
+        sb.Append("th { background-color: #f5f5f5; }");
+        sb.Append(".text-right { text-align: right; }");
+        sb.Append(".total { font-weight: bold; background-color: #e8f5e9; }");
+        sb.Append("</style></head><body>");
+        sb.Append("<h1>Reporte de Ventas</h1>");
+        sb.Append($"<h2>Periodo: {ventaFiltro.FechaDesde:dd/MM/yyyy} - {ventaFiltro.FechaHasta:dd/MM/yyyy}</h2>");
+        sb.Append($"<p>Generado: {DateTime.Now:dd/MM/yyyy HH:mm}</p>");
+        sb.Append("<table><thead><tr>");
+        sb.Append("<th>Factura</th><th>Fecha</th><th>Cliente</th><th>Usuario</th><th class='text-right'>Total</th><th>Estado</th>");
+        sb.Append("</tr></thead><tbody>");
+
+        foreach (var v in ventas)
+        {
+            sb.Append($"<tr>");
+            sb.Append($"<td>{v.NoFactura}</td>");
+            sb.Append($"<td>{FormatHelper.FormatDateTime(v.Fecha)}</td>");
+            sb.Append($"<td>{v.ClienteNombre ?? "Consumidor Final"}</td>");
+            sb.Append($"<td>{v.UsuarioNombre}</td>");
+            sb.Append($"<td class='text-right'>{FormatHelper.FormatCurrencyNoDecimals(v.Total)}</td>");
+            sb.Append($"<td>{v.Estado}</td>");
+            sb.Append("</tr>");
+        }
+
+        var total = ventas.Where(v => v.Estado != "CANCELADA").Sum(v => v.Total);
+        sb.Append($"<tr class='total'><td colspan='4'>TOTAL</td><td class='text-right'>{FormatHelper.FormatCurrencyNoDecimals(total)}</td><td></td></tr>");
+        sb.Append("</tbody></table></body></html>");
+        return sb.ToString();
+    }
+
+    private async Task ExportTopExcel()
+    {
+        var data = new List<object[]>
+        {
+            new object[] { "Ranking", "Codigo", "Producto", "Cantidad Vendida", "Ingresos Totales" }
+        };
+
+        int rank = 1;
+        foreach (var p in topProductos)
+        {
+            data.Add(new object[] { rank, p.Codigo, p.Nombre, p.CantidadVendida, p.TotalIngresos });
+            rank++;
+        }
+
+        var columnTypes = new[] { "integer", "text", "text", "number", "currency" };
+        await JS.InvokeVoidAsync("exportToExcel", data, $"TopProductos_{DateTime.Now:yyyyMMdd}", columnTypes);
+        ToastService.ShowSuccess("Archivo Excel exportado");
+    }
+
+    private async Task ExportProductosExcel()
+    {
+        var data = new List<object[]>
+        {
+            new object[] { "Codigo", "Nombre", "Precio", "Stock", "Valor Total", "Estado" }
+        };
+
+        foreach (var p in productos.OrderByDescending(p => p.Precio * p.Cantidad))
+        {
+            data.Add(new object[]
+            {
+                p.Codigo,
+                p.Nombre,
+                p.Precio,
+                p.Cantidad,
+                p.Precio * p.Cantidad,
+                p.Activo ? "Activo" : "Inactivo"
+            });
+        }
+
+        var columnTypes = new[] { "text", "text", "currency", "integer", "currency", "text" };
+        await JS.InvokeVoidAsync("exportToExcel", data, $"StockValorizado_{DateTime.Now:yyyyMMdd}", columnTypes);
+        ToastService.ShowSuccess("Archivo Excel exportado");
+    }
+
+    private async Task ExportStockBajoExcel()
+    {
+        var stockBajo = productos.Where(p => p.Cantidad < 10 && p.Activo).OrderBy(p => p.Cantidad).ToList();
+
+        var data = new List<object[]>
+        {
+            new object[] { "Codigo", "Nombre", "Stock Actual", "Urgencia" }
+        };
+
+        foreach (var p in stockBajo)
+        {
+            var urgencia = p.Cantidad == 0 ? "Sin Stock" : p.Cantidad <= 3 ? "Crítico" : "Bajo";
+            data.Add(new object[] { p.Codigo, p.Nombre, p.Cantidad, urgencia });
+        }
+
+        var columnTypes = new[] { "text", "text", "integer", "text" };
+        await JS.InvokeVoidAsync("exportToExcel", data, $"StockBajo_{DateTime.Now:yyyyMMdd}", columnTypes);
+        ToastService.ShowSuccess("Archivo Excel exportado");
+    }
+
+    private async Task ExportClientesExcel()
+    {
+        var data = new List<object[]>
+        {
+            new object[] { "Documento", "Razon Social", "Email", "Telefono", "Fecha Alta", "Estado" }
+        };
+
+        foreach (var c in clientes)
+        {
+            data.Add(new object[]
+            {
+                c.Documento,
+                c.RazonSocial,
+                c.Email ?? "",
+                c.Telefono ?? "",
+                FormatHelper.FormatDate(c.FechaAlta),
+                c.Activo ? "Activo" : "Inactivo"
+            });
+        }
+
+        var columnTypes = new[] { "text", "text", "text", "text", "text", "text" };
+        await JS.InvokeVoidAsync("exportToExcel", data, $"Clientes_{DateTime.Now:yyyyMMdd}", columnTypes);
+        ToastService.ShowSuccess("Archivo Excel exportado");
+    }
+}

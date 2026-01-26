@@ -1,0 +1,140 @@
+@page "/login"
+@layout EmptyLayout
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IToastService ToastService
+@inject IConfiguration Configuration
+
+<PageTitle>Iniciar Sesión - Distribuidora La Familia</PageTitle>
+
+<div class="login-container">
+    <div class="login-card fade-in">
+        <div class="brand">
+            <i class="bi bi-shop"></i>
+            <h1>Distribuidora La Familia</h1>
+            @if (IsTestMode)
+            {
+                <span class="badge bg-warning text-dark fs-6 ms-2">TEST</span>
+            }
+        </div>
+
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="usuario" class="form-label">Usuario</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-person"></i>
+                    </span>
+                    <InputText @bind-Value="loginModel.Usuario"
+                               class="form-control"
+                               id="usuario"
+                               placeholder="Ingrese su usuario"
+                               disabled="@isLoading" />
+                </div>
+                <ValidationMessage For="@(() => loginModel.Usuario)" />
+            </div>
+
+            <div class="mb-4">
+                <label for="password" class="form-label">Contraseña</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-lock"></i>
+                    </span>
+                    <InputText @bind-Value="loginModel.Contrasena"
+                               type="@(showPassword ? "text" : "password")"
+                               class="form-control"
+                               id="password"
+                               placeholder="Ingrese su contraseña"
+                               disabled="@isLoading" />
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="TogglePassword">
+                        <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => loginModel.Contrasena)" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    @errorMessage
+                </div>
+            }
+
+            <button type="submit"
+                    class="btn btn-primary btn-lg w-100"
+                    disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>Ingresando...</span>
+                }
+                else
+                {
+                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                    <span>Iniciar Sesión</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="text-center mt-4">
+            <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Usuario de prueba: admin / admin
+            </small>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private bool isLoading = false;
+    private bool showPassword = false;
+    private string? errorMessage;
+
+    private bool IsTestMode => Configuration.GetValue<bool>("IsTestMode");
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private void TogglePassword()
+    {
+        showPassword = !showPassword;
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(loginModel);
+
+            if (result.Success)
+            {
+                ToastService.ShowSuccess("Bienvenido!");
+
+                var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl;
+                Navigation.NavigateTo(returnUrl, forceLoad: true);
+            }
+            else
+            {
+                errorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

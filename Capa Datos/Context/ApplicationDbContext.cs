@@ -17,6 +17,9 @@ namespace Capa_Datos.Context
         public DbSet<CE_Clientes> Clientes { get; set; }
         public DbSet<CE_Grupos> Grupos { get; set; }
         public DbSet<CE_Movimiento> Movimientos { get; set; }
+        public DbSet<CE_Ventas> Ventas { get; set; }
+        public DbSet<CE_VentaDetalle> VentaDetalles { get; set; }
+        public DbSet<CE_ProductoPresentacion> ProductoPresentaciones { get; set; }
 
         #endregion
 
@@ -142,6 +145,77 @@ namespace Capa_Datos.Context
                 entity.Ignore(e => e.NombreProducto);
                 entity.Ignore(e => e.CodigoProducto);
                 entity.Ignore(e => e.UsuarioResponsable);
+            });
+
+            // ============================================
+            // CE_Ventas -> "Ventas"
+            // ============================================
+            modelBuilder.Entity<CE_Ventas>(entity =>
+            {
+                entity.ToTable("Ventas");
+                entity.HasKey(e => e.Id_Venta);
+                entity.Property(e => e.Id_Venta).HasColumnName("Id_Venta");
+                entity.Property(e => e.No_Factura).HasColumnName("No_Factura");
+                entity.Property(e => e.Fecha_Venta).HasColumnName("Fecha_Venta");
+                entity.Property(e => e.Monto_Total).HasColumnName("Monto_Total");
+                entity.Property(e => e.Id_Usuario).HasColumnName("Id_Usuario");
+                entity.Property(e => e.Id_Cliente).HasColumnName("Id_Cliente");
+                entity.Property(e => e.Cancelada).HasColumnName("Cancelada");
+                entity.Property(e => e.FechaCancelacion).HasColumnName("FechaCancelacion");
+                entity.Property(e => e.IdUsuarioCancelo).HasColumnName("IdUsuarioCancelo");
+                entity.Property(e => e.MotivoCancelacion).HasColumnName("MotivoCancelacion");
+                entity.Property(e => e.FormaPago).HasColumnName("FormaPago");
+                entity.Property(e => e.MontoRecibido).HasColumnName("MontoRecibido");
+
+                // Propiedades de navegacion (no en BD)
+                entity.Ignore(e => e.NombreCliente);
+                entity.Ignore(e => e.NombreUsuario);
+                entity.Ignore(e => e.Detalles);
+            });
+
+            // ============================================
+            // CE_VentaDetalle -> "Ventas_Detalle"
+            // ============================================
+            modelBuilder.Entity<CE_VentaDetalle>(entity =>
+            {
+                entity.ToTable("Ventas_Detalle");
+                entity.HasKey(e => e.Id_Detalle);
+                entity.Property(e => e.Id_Detalle).HasColumnName("Id_Detalle");
+                entity.Property(e => e.Id_Venta).HasColumnName("Id_Venta");
+                entity.Property(e => e.Id_Articulo).HasColumnName("Id_Articulo");
+                entity.Property(e => e.Cantidad).HasColumnName("Cantidad");
+                entity.Property(e => e.Precio_Venta).HasColumnName("Precio_Venta");
+                entity.Property(e => e.Monto_Total).HasColumnName("Monto_Total");
+
+                // Campos para soporte de presentaciones (compatibles con WPF)
+                entity.Property(e => e.IdPresentacion).HasColumnName("IdPresentacion");
+                entity.Property(e => e.CantidadUnidadesPorPresentacion)
+                      .HasColumnName("CantidadUnidadesPorPresentacion")
+                      .HasDefaultValue(1);
+
+                // Propiedades de navegacion (no en BD)
+                entity.Ignore(e => e.NombreProducto);
+                entity.Ignore(e => e.CodigoProducto);
+                entity.Ignore(e => e.PresentacionNombre);
+            });
+
+            // ============================================
+            // CE_ProductoPresentacion -> "ProductoPresentaciones"
+            // ============================================
+            modelBuilder.Entity<CE_ProductoPresentacion>(entity =>
+            {
+                entity.ToTable("ProductoPresentaciones");
+                entity.HasKey(e => e.IdPresentacion);
+                entity.Property(e => e.IdPresentacion).HasColumnName("IdPresentacion");
+                entity.Property(e => e.IdArticulo).HasColumnName("IdArticulo");
+                entity.Property(e => e.Nombre).HasColumnName("Nombre");
+                entity.Property(e => e.CantidadUnidades).HasColumnName("CantidadUnidades");
+                entity.Property(e => e.Precio).HasColumnName("Precio");
+                entity.Property(e => e.Activo).HasColumnName("Activo");
+                entity.Property(e => e.FechaCreacion).HasColumnName("FechaCreacion");
+
+                // Propiedad de navegacion (no en BD)
+                entity.Ignore(e => e.Producto);
             });
         }
 

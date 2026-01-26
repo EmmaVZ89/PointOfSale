@@ -118,6 +118,9 @@
 
                     <TextBlock Text="Email" Style="{StaticResource InputLabel}"/>
                     <TextBox x:Name="tbEmail" Style="{StaticResource InputText}"/>
+
+                    <TextBlock Text="Domicilio" Style="{StaticResource InputLabel}"/>
+                    <TextBox x:Name="tbDomicilio" Style="{StaticResource InputText}"/>
                 </StackPanel>
             </Grid>
 

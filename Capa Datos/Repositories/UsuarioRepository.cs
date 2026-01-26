@@ -96,5 +96,67 @@ namespace Capa_Datos.Repositories
                 _context.Entry(usuario).Property(u => u.Activo).IsModified = true;
             }
         }
+
+        public async Task<CE_Usuarios> CreateWithPasswordAsync(CE_Usuarios usuario, string contrasena)
+        {
+            // Usar SQL raw para insertar con contrasena encriptada usando pgp_sym_encrypt
+            var sql = @"
+                INSERT INTO ""Usuarios""
+                (""Nombre"", ""Apellido"", ""DNI"", ""CUIT"", ""Correo"", ""Telefono"",
+                 ""Fecha_Nac"", ""Privilegio"", ""usuario"", ""contrasenia"", ""Patron"", ""Activo"")
+                VALUES
+                (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, pgp_sym_encrypt(@p9, @p10), @p10, @p11)
+                RETURNING ""IdUsuario""";
+
+            using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = sql;
+
+            var parameters = new object[]
+            {
+                usuario.Nombre,
+                usuario.Apellido,
+                usuario.Dni,
+                usuario.Cuit,
+                usuario.Correo ?? "",
+                usuario.Telefono ?? "",
+                usuario.Fecha_Nac,
+                usuario.Privilegio,
+                usuario.Usuario,
+                contrasena,
+                usuario.Patron,
+                usuario.Activo
+            };
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var param = command.CreateParameter();
+                param.ParameterName = $"@p{i}";
+                param.Value = parameters[i] ?? DBNull.Value;
+                command.Parameters.Add(param);
+            }
+
+            await _context.Database.OpenConnectionAsync();
+            try
+            {
+                var result = await command.ExecuteScalarAsync();
+                usuario.IdUsuario = Convert.ToInt32(result);
+            }
+            finally
+            {
+                await _context.Database.CloseConnectionAsync();
+            }
+
+            return usuario;
+        }
+
+        public async Task ActualizarContrasenaAsync(int idUsuario, string nuevaContrasena, string patron)
+        {
+            var sql = @"
+                UPDATE ""Usuarios""
+                SET ""contrasenia"" = pgp_sym_encrypt({0}, {1})
+                WHERE ""IdUsuario"" = {2}";
+
+            await _context.Database.ExecuteSqlRawAsync(sql, nuevaContrasena, patron, idUsuario);
+        }
     }
 }

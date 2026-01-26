@@ -49,6 +49,21 @@ namespace Capa_Datos.Interfaces
         /// </summary>
         IMovimientoRepository Movimientos { get; }
 
+        /// <summary>
+        /// Repositorio de Ventas
+        /// </summary>
+        IVentaRepository Ventas { get; }
+
+        /// <summary>
+        /// Repositorio de Detalles de Venta
+        /// </summary>
+        IVentaDetalleRepository VentaDetalles { get; }
+
+        /// <summary>
+        /// Repositorio de Presentaciones de Producto
+        /// </summary>
+        IPresentacionRepository Presentaciones { get; }
+
         #endregion
 
         #region Transacciones

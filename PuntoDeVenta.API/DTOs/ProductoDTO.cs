@@ -18,6 +18,10 @@ namespace PuntoDeVenta.API.DTOs
         public string UnidadMedida { get; set; }
         public string Descripcion { get; set; }
         public bool TieneImagen { get; set; }
+        /// <summary>
+        /// Cantidad de presentaciones activas del producto
+        /// </summary>
+        public int CantidadPresentaciones { get; set; }
     }
 
     /// <summary>
@@ -32,8 +36,8 @@ namespace PuntoDeVenta.API.DTOs
         [Required(ErrorMessage = "El grupo es requerido")]
         public int Grupo { get; set; }
 
-        [Required(ErrorMessage = "El codigo es requerido")]
-        [StringLength(50, ErrorMessage = "El codigo no puede exceder 50 caracteres")]
+        [Required(ErrorMessage = "El código es requerido")]
+        [StringLength(50, ErrorMessage = "El código no puede exceder 50 caracteres")]
         public string Codigo { get; set; }
 
         [Required(ErrorMessage = "El precio es requerido")]
@@ -90,5 +94,14 @@ namespace PuntoDeVenta.API.DTOs
         public decimal NuevaCantidad { get; set; }
 
         public string Observacion { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para cambiar estado (activar/desactivar)
+    /// </summary>
+    public class CambiarEstadoDTO
+    {
+        [Required]
+        public bool Activo { get; set; }
     }
 }

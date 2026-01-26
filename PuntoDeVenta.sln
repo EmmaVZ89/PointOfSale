@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Capa Negocio", "Capa Negoci
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PuntoDeVenta.API", "PuntoDeVenta.API\PuntoDeVenta.API.csproj", "{AE9C0942-212D-4F9B-A588-FA7AF07FDA22}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PuntoDeVenta.Web", "PuntoDeVenta.Web\PuntoDeVenta.Web.csproj", "{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{AE9C0942-212D-4F9B-A588-FA7AF07FDA22}.Release|x64.Build.0 = Release|Any CPU
 		{AE9C0942-212D-4F9B-A588-FA7AF07FDA22}.Release|x86.ActiveCfg = Release|Any CPU
 		{AE9C0942-212D-4F9B-A588-FA7AF07FDA22}.Release|x86.Build.0 = Release|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Debug|x64.Build.0 = Debug|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Debug|x86.Build.0 = Debug|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Release|x64.ActiveCfg = Release|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Release|x64.Build.0 = Release|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Release|x86.ActiveCfg = Release|Any CPU
+		{12725B18-64FE-44C8-8F7F-C4C1DCE3A674}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -276,7 +276,7 @@ namespace PuntoDeVenta.Views
             this.objeto_CE_Usuarios.Dni = int.Parse(this.tbDNI.Text);
             this.objeto_CE_Usuarios.Cuit = int.Parse(this.tbCUIT.Text); // Ojo con long/double si CUIT > int max
             this.objeto_CE_Usuarios.Correo = this.tbCorreo.Text;
-            this.objeto_CE_Usuarios.Telefono = int.Parse(this.tbTelefono.Text);
+            this.objeto_CE_Usuarios.Telefono = this.tbTelefono.Text;
             this.objeto_CE_Usuarios.Fecha_Nac = DateTime.Parse(this.tbFecha.Text);
             this.objeto_CE_Usuarios.Privilegio = privilegio;
             this.objeto_CE_Usuarios.Usuario = this.tbUsuario.Text;

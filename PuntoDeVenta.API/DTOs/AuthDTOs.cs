@@ -10,7 +10,7 @@ namespace PuntoDeVenta.API.DTOs
         [Required(ErrorMessage = "El usuario es requerido")]
         public string Usuario { get; set; }
 
-        [Required(ErrorMessage = "La contrasena es requerida")]
+        [Required(ErrorMessage = "La contraseña es requerida")]
         public string Contrasena { get; set; }
     }
 
@@ -19,7 +19,7 @@ namespace PuntoDeVenta.API.DTOs
     /// </summary>
     public class PatronLoginRequest
     {
-        [Required(ErrorMessage = "El patron es requerido")]
+        [Required(ErrorMessage = "El patrón es requerido")]
         public string Patron { get; set; }
     }
 

@@ -370,6 +370,13 @@ namespace PuntoDeVenta.Views
                 DateTime fechaVenta = Convert.ToDateTime(cabecera["Fecha_Venta"]);
                 decimal montoTotal = Convert.ToDecimal(cabecera["Monto_Total"]);
 
+                // Datos del cliente (ahora vienen de la consulta de cabecera)
+                clienteNombre = cabecera["Cliente"]?.ToString() ?? "Consumidor Final";
+                string clienteDocumento = cabecera["Documento"] != DBNull.Value && !string.IsNullOrWhiteSpace(cabecera["Documento"]?.ToString())
+                    ? cabecera["Documento"].ToString() : "-";
+                string clienteDomicilio = cabecera["Domicilio"] != DBNull.Value && !string.IsNullOrWhiteSpace(cabecera["Domicilio"]?.ToString())
+                    ? cabecera["Domicilio"].ToString() : "-";
+
                 // Convertir DataTable a List<ItemVenta>
                 List<ItemVenta> items = new List<ItemVenta>();
                 foreach (DataRow item in dtDetalle.Rows)
@@ -385,7 +392,7 @@ namespace PuntoDeVenta.Views
                 }
 
                 // Usar el mismo método de POS para generar el presupuesto A4
-                POS.GenerarPresupuestoPDF(noFactura, fechaVenta, clienteNombre, "-", items, montoTotal);
+                POS.GenerarPresupuestoPDF(noFactura, fechaVenta, clienteNombre, clienteDocumento, clienteDomicilio, items, montoTotal);
             }
             catch (Exception ex)
             {

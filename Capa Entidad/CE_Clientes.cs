@@ -13,6 +13,7 @@ namespace Capa_Entidad
         private string documento;
         private string telefono;
         private string email;
+        private string domicilio;
         private bool activo;
         private DateTime fechaAlta;
 
@@ -21,6 +22,7 @@ namespace Capa_Entidad
         public string Documento { get => documento; set => documento = value; }
         public string Telefono { get => telefono; set => telefono = value; }
         public string Email { get => email; set => email = value; }
+        public string Domicilio { get => domicilio; set => domicilio = value; }
         public bool Activo { get => activo; set => activo = value; }
         public DateTime FechaAlta { get => fechaAlta; set => fechaAlta = value; }
     }

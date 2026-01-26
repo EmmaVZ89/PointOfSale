@@ -45,6 +45,7 @@ namespace PuntoDeVenta.Views
             tbDocumento.IsEnabled = false;
             tbTelefono.IsEnabled = false;
             tbEmail.IsEnabled = false;
+            tbDomicilio.IsEnabled = false;
         }
         #endregion
 
@@ -100,6 +101,7 @@ namespace PuntoDeVenta.Views
                     this.tbDocumento.Text = auxCN.Documento;
                     this.tbTelefono.Text = auxCN.Telefono;
                     this.tbEmail.Text = auxCN.Email;
+                    this.tbDomicilio.Text = auxCN.Domicilio;
                 }
             }
             catch (Exception ex)
@@ -179,6 +181,7 @@ namespace PuntoDeVenta.Views
             this.objeto_CE_Clientes.Documento = this.tbDocumento.Text.Trim();
             this.objeto_CE_Clientes.Telefono = this.tbTelefono.Text.Trim();
             this.objeto_CE_Clientes.Email = this.tbEmail.Text.Trim();
+            this.objeto_CE_Clientes.Domicilio = this.tbDomicilio.Text.Trim();
         }
 
         private void MostrarError(string mensaje)

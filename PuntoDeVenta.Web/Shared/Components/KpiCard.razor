@@ -1,0 +1,19 @@
+<div class="kpi-card @ColorClass fade-in">
+    <i class="bi @IconClass kpi-icon"></i>
+    <div class="kpi-value">@Value</div>
+    <div class="kpi-label">@Label</div>
+</div>
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = "0";
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string IconClass { get; set; } = "bi-graph-up";
+
+    [Parameter]
+    public string ColorClass { get; set; } = "kpi-blue";
+}

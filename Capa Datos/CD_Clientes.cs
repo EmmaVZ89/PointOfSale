@@ -19,14 +19,15 @@ namespace Capa_Datos
         {
             try
             {
-                string sql = "INSERT INTO \"Clientes\" (\"RazonSocial\", \"Documento\", \"Telefono\", \"Email\", \"Activo\") " +
-                             "VALUES (@RazonSocial, @Documento, @Telefono, @Email, TRUE)";
+                string sql = "INSERT INTO \"Clientes\" (\"RazonSocial\", \"Documento\", \"Telefono\", \"Email\", \"Domicilio\", \"Activo\") " +
+                             "VALUES (@RazonSocial, @Documento, @Telefono, @Email, @Domicilio, TRUE)";
 
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, this.conn.AbrirConexion());
                 cmd.Parameters.AddWithValue("@RazonSocial", cliente.RazonSocial);
                 cmd.Parameters.AddWithValue("@Documento", (object)cliente.Documento ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Telefono", (object)cliente.Telefono ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Email", (object)cliente.Email ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Domicilio", (object)cliente.Domicilio ?? DBNull.Value);
 
                 cmd.ExecuteNonQuery();
             }
@@ -40,7 +41,7 @@ namespace Capa_Datos
         #region CONSULTAR
         public CE_Clientes CD_Consultar(int idCliente)
         {
-            string sql = "SELECT \"IdCliente\", \"RazonSocial\", \"Documento\", \"Telefono\", \"Email\", \"Activo\", \"FechaAlta\" " +
+            string sql = "SELECT \"IdCliente\", \"RazonSocial\", \"Documento\", \"Telefono\", \"Email\", \"Domicilio\", \"Activo\", \"FechaAlta\" " +
                          "FROM \"Clientes\" WHERE \"IdCliente\" = @IdCliente";
 
             NpgsqlDataAdapter adapter = new NpgsqlDataAdapter(sql, this.conn.AbrirConexion());
@@ -57,6 +58,7 @@ namespace Capa_Datos
                 this.capaEntidadClientes.Documento = row["Documento"] != DBNull.Value ? Convert.ToString(row["Documento"]) : "";
                 this.capaEntidadClientes.Telefono = row["Telefono"] != DBNull.Value ? Convert.ToString(row["Telefono"]) : "";
                 this.capaEntidadClientes.Email = row["Email"] != DBNull.Value ? Convert.ToString(row["Email"]) : "";
+                this.capaEntidadClientes.Domicilio = row["Domicilio"] != DBNull.Value ? Convert.ToString(row["Domicilio"]) : "";
                 this.capaEntidadClientes.Activo = Convert.ToBoolean(row["Activo"]);
                 this.capaEntidadClientes.FechaAlta = Convert.ToDateTime(row["FechaAlta"]);
             }
@@ -105,7 +107,7 @@ namespace Capa_Datos
             try
             {
                 string sql = "UPDATE \"Clientes\" SET \"RazonSocial\"=@RazonSocial, \"Documento\"=@Documento, " +
-                             "\"Telefono\"=@Telefono, \"Email\"=@Email WHERE \"IdCliente\" = @IdCliente";
+                             "\"Telefono\"=@Telefono, \"Email\"=@Email, \"Domicilio\"=@Domicilio WHERE \"IdCliente\" = @IdCliente";
 
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, this.conn.AbrirConexion());
                 cmd.Parameters.AddWithValue("@IdCliente", cliente.IdCliente);
@@ -113,6 +115,7 @@ namespace Capa_Datos
                 cmd.Parameters.AddWithValue("@Documento", (object)cliente.Documento ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Telefono", (object)cliente.Telefono ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Email", (object)cliente.Email ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Domicilio", (object)cliente.Domicilio ?? DBNull.Value);
 
                 cmd.ExecuteNonQuery();
             }
@@ -129,7 +132,7 @@ namespace Capa_Datos
             DataTable dt = new DataTable();
             try
             {
-                string sql = "SELECT \"IdCliente\", \"RazonSocial\", \"Documento\", \"Telefono\", \"Email\", \"Activo\", \"FechaAlta\" " +
+                string sql = "SELECT \"IdCliente\", \"RazonSocial\", \"Documento\", \"Telefono\", \"Email\", \"Domicilio\", \"Activo\", \"FechaAlta\" " +
                              "FROM \"Clientes\" " +
                              "WHERE \"RazonSocial\" ILIKE '%' || @buscar || '%' OR \"Documento\" ILIKE '%' || @buscar || '%' " +
                              "ORDER BY \"Activo\" DESC, \"RazonSocial\" ASC";
@@ -152,7 +155,7 @@ namespace Capa_Datos
             List<CE_Clientes> lista = new List<CE_Clientes>();
             try
             {
-                string sql = "SELECT \"IdCliente\", \"RazonSocial\", \"Documento\" " +
+                string sql = "SELECT \"IdCliente\", \"RazonSocial\", \"Documento\", \"Domicilio\" " +
                              "FROM \"Clientes\" " +
                              "WHERE \"Activo\" = TRUE " +
                              "ORDER BY \"IdCliente\" ASC";
@@ -167,7 +170,8 @@ namespace Capa_Datos
                     {
                         IdCliente = Convert.ToInt32(row["IdCliente"]),
                         RazonSocial = Convert.ToString(row["RazonSocial"]),
-                        Documento = row["Documento"] != DBNull.Value ? Convert.ToString(row["Documento"]) : ""
+                        Documento = row["Documento"] != DBNull.Value ? Convert.ToString(row["Documento"]) : "",
+                        Domicilio = row["Domicilio"] != DBNull.Value ? Convert.ToString(row["Domicilio"]) : ""
                     };
                     lista.Add(cliente);
                 }

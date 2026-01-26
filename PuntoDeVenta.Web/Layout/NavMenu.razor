@@ -1,0 +1,340 @@
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
+@inject IToastService ToastService
+@inject SidebarState SidebarState
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<nav class="sidebar @(SidebarState.IsCollapsed ? "collapsed" : "")">
+    <!-- Header with Logo and Menu Toggle -->
+    <div class="sidebar-header">
+        <div class="brand">
+            <img src="images/logo.png" alt="La Familia" class="brand-logo" />
+        </div>
+        <button class="menu-toggle" @onclick="ToggleSidebar" title="@(SidebarState.IsCollapsed ? "Expandir menú" : "Colapsar menú")">
+            <i class="bi @(SidebarState.IsCollapsed ? "bi-list" : "bi-x-lg")"></i>
+        </button>
+    </div>
+
+    <!-- Menu Items (Desktop/Tablet) -->
+    <div class="nav-section nav-section-desktop">
+        <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
+            <i class="bi bi-speedometer2"></i>
+            <span class="nav-text">Dashboard</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="pos">
+            <i class="bi bi-cart3"></i>
+            <span class="nav-text">POS</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="caja">
+            <i class="bi bi-cash-coin"></i>
+            <span class="nav-text">Caja</span>
+        </NavLink>
+
+        <div class="menu-divider"></div>
+
+        <NavLink class="nav-link" href="productos">
+            <i class="bi bi-box-seam"></i>
+            <span class="nav-text">Productos</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="clientes">
+            <i class="bi bi-people"></i>
+            <span class="nav-text">Clientes</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="inventario">
+            <i class="bi bi-clipboard-data"></i>
+            <span class="nav-text">Inventario</span>
+        </NavLink>
+
+        <div class="menu-divider"></div>
+
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <NavLink class="nav-link" href="usuarios">
+                    <i class="bi bi-person-gear"></i>
+                    <span class="nav-text">Usuarios</span>
+                </NavLink>
+
+                <NavLink class="nav-link" href="reportes">
+                    <i class="bi bi-file-earmark-bar-graph"></i>
+                    <span class="nav-text">Reportes</span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <!-- Menu Items (Mobile) - Solo 5 items principales -->
+    <div class="nav-section nav-section-mobile">
+        <NavLink class="nav-link" href="pos">
+            <i class="bi bi-cart3"></i>
+            <span class="nav-text">POS</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="caja">
+            <i class="bi bi-cash-coin"></i>
+            <span class="nav-text">Caja</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="productos">
+            <i class="bi bi-box-seam"></i>
+            <span class="nav-text">Productos</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="inventario">
+            <i class="bi bi-clipboard-data"></i>
+            <span class="nav-text">Inventario</span>
+        </NavLink>
+
+        <!-- Botón Más con dropdown -->
+        <div class="nav-more-dropdown">
+            <button class="nav-link nav-more-btn" @onclick="ToggleMobileMenu" @onclick:stopPropagation="true">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+                <span class="nav-text">Más</span>
+            </button>
+        </div>
+    </div>
+
+    @if (showMobileMenu)
+    {
+        <div class="nav-more-backdrop" @onclick="() => showMobileMenu = false"></div>
+        <div class="nav-more-menu" @onclick:stopPropagation="true">
+            <NavLink class="nav-more-item" href="dashboard" @onclick="() => showMobileMenu = false">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </NavLink>
+            <NavLink class="nav-more-item" href="clientes" @onclick="() => showMobileMenu = false">
+                <i class="bi bi-people"></i>
+                <span>Clientes</span>
+            </NavLink>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <NavLink class="nav-more-item" href="reportes" @onclick="() => showMobileMenu = false">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Reportes</span>
+                    </NavLink>
+                </Authorized>
+            </AuthorizeView>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <NavLink class="nav-more-item" href="usuarios" @onclick="() => showMobileMenu = false">
+                        <i class="bi bi-person-gear"></i>
+                        <span>Usuarios</span>
+                    </NavLink>
+                </Authorized>
+            </AuthorizeView>
+            <hr class="my-1" />
+            <NavLink class="nav-more-item" href="mi-cuenta" @onclick="() => showMobileMenu = false">
+                <i class="bi bi-person-circle"></i>
+                <span>Mi Cuenta</span>
+            </NavLink>
+            <a class="nav-more-item" @onclick="() => { ShowThemeModal(); showMobileMenu = false; }">
+                <i class="bi bi-palette"></i>
+                <span>Tema</span>
+            </a>
+            <a class="nav-more-item" @onclick="() => { ShowAboutModal(); showMobileMenu = false; }">
+                <i class="bi bi-info-circle"></i>
+                <span>Acerca de</span>
+            </a>
+            <hr class="my-1" />
+            <a class="nav-more-item text-danger" @onclick="HandleLogout">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    }
+
+    <!-- Footer Section (Desktop/Tablet) -->
+    <div class="nav-footer nav-footer-desktop">
+        <div class="menu-divider"></div>
+
+        <a class="nav-link cursor-pointer" @onclick="ShowThemeModal">
+            <i class="bi bi-palette"></i>
+            <span class="nav-text">Tema</span>
+        </a>
+
+        <NavLink class="nav-link" href="mi-cuenta">
+            <i class="bi bi-person-circle"></i>
+            <span class="nav-text">Mi Cuenta</span>
+        </NavLink>
+
+        <a class="nav-link cursor-pointer" @onclick="ShowAboutModal">
+            <i class="bi bi-info-circle"></i>
+            <span class="nav-text">Acerca de</span>
+        </a>
+
+        <a class="nav-link cursor-pointer" @onclick="HandleLogout">
+            <i class="bi bi-box-arrow-left"></i>
+            <span class="nav-text">Cerrar Sesión</span>
+        </a>
+    </div>
+</nav>
+
+<!-- Modal Tema -->
+@if (showThemeModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-palette me-2"></i>
+                        Seleccionar Tema
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showThemeModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex flex-column gap-2">
+                        <button class="btn @(ThemeService.CurrentTheme == "default" ? "btn-primary" : "btn-outline-secondary") d-flex align-items-center gap-2"
+                                @onclick="SetThemeDefault">
+                            <span class="theme-option theme-default" style="width: 24px; height: 24px;"></span>
+                            <span>Predeterminado</span>
+                            @if (ThemeService.CurrentTheme == "default")
+                            {
+                                <i class="bi bi-check-lg ms-auto"></i>
+                            }
+                        </button>
+                        <button class="btn @(ThemeService.CurrentTheme == "green" ? "btn-primary" : "btn-outline-secondary") d-flex align-items-center gap-2"
+                                @onclick="SetThemeGreen">
+                            <span class="theme-option theme-green" style="width: 24px; height: 24px;"></span>
+                            <span>Verde</span>
+                            @if (ThemeService.CurrentTheme == "green")
+                            {
+                                <i class="bi bi-check-lg ms-auto"></i>
+                            }
+                        </button>
+                        <button class="btn @(ThemeService.CurrentTheme == "red" ? "btn-primary" : "btn-outline-secondary") d-flex align-items-center gap-2"
+                                @onclick="SetThemeRed">
+                            <span class="theme-option theme-red" style="width: 24px; height: 24px;"></span>
+                            <span>Rojo</span>
+                            @if (ThemeService.CurrentTheme == "red")
+                            {
+                                <i class="bi bi-check-lg ms-auto"></i>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Acerca de -->
+@if (showAboutModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" @onclick="() => showAboutModal = false"></button>
+                </div>
+                <div class="modal-body text-center pt-0">
+                    <div class="about-logo mb-3">
+                        <img src="images/logo.png" alt="La Familia" style="width: 120px; height: 120px; object-fit: contain;" />
+                    </div>
+                    <h4 class="fw-bold mb-1">Distribuidora La Familia</h4>
+                    <p class="text-muted mb-3">Gestión POS - Versión 2.0.0</p>
+
+                    <div class="about-description mb-4">
+                        <p class="mb-2">Sistema de gestión comercial moderno y eficiente para el control de ventas, inventario y clientes.</p>
+                    </div>
+
+                    <hr />
+
+                    <div class="developer-info mt-3">
+                        <p class="text-muted small mb-2">Desarrollado por</p>
+                        <h5 class="fw-bold mb-2">Emmanuel Zelarayan</h5>
+                        <a href="https://www.linkedin.com/in/emmanuel-zelarayan/"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-linkedin me-1"></i>
+                            LinkedIn
+                        </a>
+                        <a href="https://github.com/EmmaVZ89"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-outline-dark btn-sm ms-2">
+                            <i class="bi bi-github me-1"></i>
+                            GitHub
+                        </a>
+                    </div>
+
+                    <hr class="mt-4" />
+
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-c-circle me-1"></i>
+                        @DateTime.Now.Year - Todos los derechos reservados
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool showAboutModal = false;
+    private bool showThemeModal = false;
+    private bool showMobileMenu = false;
+
+    protected override void OnInitialized()
+    {
+        SidebarState.OnChange += StateHasChanged;
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    private void ToggleSidebar()
+    {
+        SidebarState.ToggleSidebar();
+    }
+
+    private void ToggleMobileMenu()
+    {
+        showMobileMenu = !showMobileMenu;
+    }
+
+    private void ShowAboutModal()
+    {
+        showAboutModal = true;
+    }
+
+    private void ShowThemeModal()
+    {
+        showThemeModal = true;
+    }
+
+    private async Task SetThemeDefault() => await SetTheme("default");
+    private async Task SetThemeGreen() => await SetTheme("green");
+    private async Task SetThemeRed() => await SetTheme("red");
+
+    private async Task SetTheme(string theme)
+    {
+        await ThemeService.SetThemeAsync(theme);
+        showThemeModal = false;
+        ToastService.ShowSuccess($"Tema cambiado a {GetThemeName(theme)}");
+    }
+
+    private string GetThemeName(string theme) => theme switch
+    {
+        "default" => "Predeterminado",
+        "green" => "Verde",
+        "red" => "Rojo",
+        _ => theme
+    };
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        ToastService.ShowInfo("Sesión cerrada correctamente");
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        SidebarState.OnChange -= StateHasChanged;
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}

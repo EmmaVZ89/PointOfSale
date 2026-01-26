@@ -1,0 +1,23 @@
+<div class="empty-state">
+    <i class="bi @IconClass"></i>
+    <h3>@Title</h3>
+    <p class="text-muted">@Message</p>
+    @if (ActionContent != null)
+    {
+        @ActionContent
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Sin datos";
+
+    [Parameter]
+    public string Message { get; set; } = "No hay datos para mostrar.";
+
+    [Parameter]
+    public string IconClass { get; set; } = "bi-inbox";
+
+    [Parameter]
+    public RenderFragment? ActionContent { get; set; }
+}

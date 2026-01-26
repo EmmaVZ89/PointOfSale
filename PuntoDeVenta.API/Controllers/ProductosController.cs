@@ -37,16 +37,36 @@ namespace PuntoDeVenta.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene todos los productos activos
+        /// Obtiene todos los productos (activos e inactivos).
+        /// Usa query param ?soloActivos=true para filtrar solo activos.
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ProductoDTO>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ProductoDTO>>>> GetAll([FromQuery] bool soloActivos = false)
         {
             try
             {
-                var productos = await _unitOfWork.Productos.GetActivosAsync();
+                IEnumerable<CE_Productos> productos;
+
+                if (soloActivos)
+                {
+                    productos = await _unitOfWork.Productos.GetActivosAsync();
+                }
+                else
+                {
+                    // Obtener todos (activos e inactivos) para administracion
+                    productos = await _unitOfWork.Productos.GetAllAsync();
+                }
+
                 var grupos = await _unitOfWork.Grupos.GetAllAsync();
                 var gruposDict = grupos.ToDictionary(g => g.IdGrupo, g => g.Nombre);
+
+                // Obtener cuenta de presentaciones tipo pack (CantidadUnidades > 1) activas por producto
+                // Solo cuenta packs, no la presentacion "Unidad", para determinar si mostrar modal en POS
+                var presentaciones = await _unitOfWork.Presentaciones.GetAllAsync();
+                var presentacionesCount = presentaciones
+                    .Where(p => p.Activo && p.CantidadUnidades > 1)
+                    .GroupBy(p => p.IdArticulo)
+                    .ToDictionary(g => g.Key, g => g.Count());
 
                 var productosDTO = productos.Select(p => new ProductoDTO
                 {
@@ -60,14 +80,43 @@ namespace PuntoDeVenta.API.Controllers
                     Cantidad = p.Cantidad,
                     UnidadMedida = p.UnidadMedida,
                     Descripcion = p.Descripcion,
-                    TieneImagen = p.Img != null && p.Img.Length > 0
-                });
+                    TieneImagen = p.Img != null && p.Img.Length > 0,
+                    CantidadPresentaciones = presentacionesCount.ContainsKey(p.IdArticulo) ? presentacionesCount[p.IdArticulo] : 0
+                }).OrderBy(p => p.Nombre);
 
                 return Ok(ApiResponse<IEnumerable<ProductoDTO>>.Ok(productosDTO));
             }
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse<IEnumerable<ProductoDTO>>.Error(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Activa o desactiva un producto
+        /// </summary>
+        [HttpPatch("{id}/estado")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<bool>>> CambiarEstado(int id, [FromBody] CambiarEstadoDTO dto)
+        {
+            try
+            {
+                var producto = await _unitOfWork.Productos.GetByIdAsync(id);
+
+                if (producto == null)
+                {
+                    return NotFound(ApiResponse<bool>.Error("Producto no encontrado"));
+                }
+
+                await _unitOfWork.Productos.CambiarEstadoAsync(id, dto.Activo);
+                await _unitOfWork.SaveChangesAsync();
+
+                var mensaje = dto.Activo ? "Producto activado" : "Producto desactivado";
+                return Ok(ApiResponse<bool>.Ok(true, mensaje));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<bool>.Error(ex.Message));
             }
         }
 
@@ -161,7 +210,7 @@ namespace PuntoDeVenta.API.Controllers
             {
                 if (string.IsNullOrWhiteSpace(termino))
                 {
-                    return BadRequest(ApiResponse<IEnumerable<ProductoDTO>>.Error("El termino de busqueda es requerido"));
+                    return BadRequest(ApiResponse<IEnumerable<ProductoDTO>>.Error("El término de búsqueda es requerido"));
                 }
 
                 var productos = await _unitOfWork.Productos.BuscarPorNombreAsync(termino);
@@ -234,11 +283,11 @@ namespace PuntoDeVenta.API.Controllers
         {
             try
             {
-                // Verificar si el codigo ya existe
+                // Verificar si el código ya existe
                 var existente = await _unitOfWork.Productos.GetByCodigoAsync(dto.Codigo);
                 if (existente != null)
                 {
-                    return BadRequest(ApiResponse<ProductoDTO>.Error("Ya existe un producto con ese codigo"));
+                    return BadRequest(ApiResponse<ProductoDTO>.Error("Ya existe un producto con ese código"));
                 }
 
                 var producto = new CE_Productos
@@ -254,6 +303,19 @@ namespace PuntoDeVenta.API.Controllers
                 };
 
                 await _unitOfWork.Productos.AddAsync(producto);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Crear automaticamente la presentacion "Unidad" para el nuevo producto
+                var presentacionUnidad = new CE_ProductoPresentacion
+                {
+                    IdArticulo = producto.IdArticulo,
+                    Nombre = "Unidad",
+                    CantidadUnidades = 1,
+                    Precio = producto.Precio,
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow
+                };
+                await _unitOfWork.Presentaciones.AddAsync(presentacionUnidad);
                 await _unitOfWork.SaveChangesAsync();
 
                 var grupo = await _unitOfWork.Grupos.GetByIdAsync(producto.Grupo);
