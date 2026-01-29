@@ -17,8 +17,9 @@ docs/
 # ARCHIVOS SENSIBLES - NUNCA SUBIR AL REPOSITORIO
 # -----------------------------------------------------------------------------
 
-# Archivo de configuracion con credenciales reales
-appsettings.json
+# Archivo de configuracion LOCAL con credenciales reales (no subir)
+appsettings.local.json
+appsettings.Development.json
 
 # Archivos de secretos de usuario (.NET Core)
 secrets.json
