@@ -24,6 +24,9 @@ RUN dotnet build "PuntoDeVenta.Web.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "PuntoDeVenta.Web.csproj" -c Release -o /app/publish
 
+# Usar configuracion de produccion (reemplazar appsettings.json)
+RUN cp /app/publish/wwwroot/appsettings.Production.json /app/publish/wwwroot/appsettings.json || true
+
 # Stage 3: nginx para hosting estatico
 FROM nginx:alpine AS final
 
