@@ -1,0 +1,35 @@
+# Ignorar archivos de compilación
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Logs
+logs/
+*.log
+
+# Node modules (si hay)
+node_modules/
+
+# Git
+.git/
+
+# Documentación
+docs/
+
+# Cliente WPF (no se despliega en Railway)
+PuntoDeVenta/
+
+# Archivos de prueba
+*.Tests/
+
+# Archivos temporales
+*.tmp
+*.temp
+.idea/
