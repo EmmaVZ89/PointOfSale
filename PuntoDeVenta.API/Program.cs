@@ -204,11 +204,41 @@ try
     // ============================================
     // HEALTH CHECKS (Railway)
     // ============================================
-    var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-        ?? ConfigurationHelper.GetConnectionString();
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    var connectionString = !string.IsNullOrEmpty(databaseUrl)
+        ? ConvertDatabaseUrlToConnectionString(databaseUrl)
+        : ConfigurationHelper.GetConnectionString();
 
-    builder.Services.AddHealthChecks()
-        .AddNpgSql(connectionString, name: "postgresql", tags: new[] { "db", "ready" });
+    var healthChecksBuilder = builder.Services.AddHealthChecks();
+
+    // Solo agregar check de PostgreSQL si hay connection string válido
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        healthChecksBuilder.AddNpgSql(connectionString, name: "postgresql", tags: new[] { "db", "ready" });
+    }
+
+    // Funcion para convertir DATABASE_URL (formato Railway) a connection string .NET
+    static string ConvertDatabaseUrlToConnectionString(string databaseUrl)
+    {
+        try
+        {
+            // Railway format: postgresql://user:password@host:port/database
+            var uri = new Uri(databaseUrl);
+            var userInfo = uri.UserInfo.Split(':');
+            var user = userInfo[0];
+            var password = userInfo.Length > 1 ? userInfo[1] : "";
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 5432;
+            var database = uri.AbsolutePath.TrimStart('/');
+
+            return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+        }
+        catch
+        {
+            // Si falla el parseo, devolver como está (puede ser ya un connection string)
+            return databaseUrl;
+        }
+    }
 
     // ============================================
     // EXCEPTION HANDLER (OWASP A09)
