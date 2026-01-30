@@ -33,8 +33,23 @@ namespace Capa_Datos.Repositories
                 .Where(d => d.Id_Venta == idVenta)
                 .ToListAsync();
 
-            // Cargar info de productos
-            var idArticulos = detalles.Select(d => d.Id_Articulo).Distinct().ToList();
+            if (!detalles.Any())
+            {
+                return detalles;
+            }
+
+            // Cargar info de productos (filtrar nulls y convertir a List<int>)
+            var idArticulos = detalles
+                .Where(d => d.Id_Articulo.HasValue)
+                .Select(d => d.Id_Articulo!.Value)
+                .Distinct()
+                .ToList();
+
+            if (!idArticulos.Any())
+            {
+                return detalles;
+            }
+
             var productos = await _context.Productos
                 .AsNoTracking()
                 .Where(p => idArticulos.Contains(p.IdArticulo))
