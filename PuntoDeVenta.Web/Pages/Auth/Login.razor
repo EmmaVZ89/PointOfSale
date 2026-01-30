@@ -81,12 +81,15 @@
             </button>
         </EditForm>
 
-        <div class="text-center mt-4">
-            <small class="text-muted">
-                <i class="bi bi-info-circle me-1"></i>
-                Usuario de prueba: admin / admin
-            </small>
-        </div>
+        @if (IsTestMode)
+        {
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Usuario de prueba: admin / admin
+                </small>
+            </div>
+        }
     </div>
 </div>
 
