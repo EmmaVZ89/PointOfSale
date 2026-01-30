@@ -1,6 +1,7 @@
 @page "/inventario"
 @attribute [Authorize]
 @using PuntoDeVenta.Web.Services
+@using PuntoDeVenta.Web.Helpers
 @inject IMovimientoService MovimientoService
 @inject IProductoService ProductoService
 @inject IGrupoService GrupoService
@@ -825,7 +826,7 @@ else
             csv.AppendLine($"{mov.FechaMovimiento:dd/MM/yyyy HH:mm},{mov.TipoMovimiento},\"{mov.NombreProducto}\",{mov.CodigoProducto},{mov.Cantidad},\"{mov.UsuarioResponsable}\",\"{mov.Observacion ?? ""}\"");
         }
 
-        var fileName = $"Movimientos_{DateTime.Now:yyyyMMddHHmmss}.csv";
+        var fileName = $"Movimientos_{DateTimeArgentina.FileTimestamp}.csv";
         await DownloadFile(fileName, csv.ToString(), "text/csv");
         ToastService.ShowSuccess("Archivo CSV exportado");
     }
@@ -851,7 +852,7 @@ else
         sb.Append(".entrada { color: green; } .salida { color: red; }");
         sb.Append("</style></head><body>");
         sb.Append("<h1>Reporte de Movimientos de Inventario</h1>");
-        sb.Append($"<p>Generado: {DateTime.Now:dd/MM/yyyy HH:mm}</p>");
+        sb.Append($"<p>Generado: {DateTimeArgentina.FormatDateTime(DateTimeArgentina.Now)}</p>");
         sb.Append("<table><thead><tr>");
         sb.Append("<th>Fecha</th><th>Tipo</th><th>Producto</th><th>Código</th><th class='text-right'>Cantidad</th><th>Usuario</th><th>Observación</th>");
         sb.Append("</tr></thead><tbody>");
@@ -886,7 +887,7 @@ else
             csv.AppendLine($"{prod.Codigo},\"{prod.Nombre}\",\"{prod.Grupo}\",{prod.StockActual},{prod.StockMinimo},{prod.PrecioCompra},{prod.PrecioVenta},{prod.ValorInventario},{(prod.StockBajo ? "Si" : "No")}");
         }
 
-        var fileName = $"Stock_{DateTime.Now:yyyyMMddHHmmss}.csv";
+        var fileName = $"Stock_{DateTimeArgentina.FileTimestamp}.csv";
         await DownloadFile(fileName, csv.ToString(), "text/csv");
         ToastService.ShowSuccess("Reporte de stock exportado");
     }

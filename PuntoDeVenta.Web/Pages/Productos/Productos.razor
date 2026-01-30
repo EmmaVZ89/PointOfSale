@@ -1,6 +1,7 @@
 @page "/productos"
 @attribute [Authorize]
 @using PuntoDeVenta.Web.Services
+@using PuntoDeVenta.Web.Helpers
 @inject IProductoService ProductoService
 @inject IGrupoService GrupoService
 @inject IPresentacionService PresentacionService
@@ -707,7 +708,7 @@ else
                 return;
             }
 
-            var fechaActual = FormatHelper.FormatDate(DateTime.Now);
+            var fechaActual = DateTimeArgentina.FormatDate(DateTimeArgentina.Now);
 
             // Generar Excel
             var data = new List<object[]>
@@ -729,7 +730,7 @@ else
             }
 
             var columnTypes = new[] { "text", "text", "text", "integer", "currency" };
-            await JS.InvokeVoidAsync("exportToExcel", data, $"Lista_Precios_{DateTime.Now:yyyyMMdd}", columnTypes);
+            await JS.InvokeVoidAsync("exportToExcel", data, $"Lista_Precios_{DateTimeArgentina.FileDate}", columnTypes);
 
             ToastService.ShowSuccess($"Excel descargado ({presentacionesActivas.Count} presentaciones).");
         }
@@ -761,7 +762,7 @@ else
                 return;
             }
 
-            var fechaActual = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            var fechaActual = DateTimeArgentina.FormatDateTime(DateTimeArgentina.Now);
 
             // Generar HTML para PDF
             var html = new System.Text.StringBuilder();

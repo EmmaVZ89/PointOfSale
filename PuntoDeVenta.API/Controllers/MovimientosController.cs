@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Capa_Datos;
 using Capa_Datos.Interfaces;
 using Capa_Entidad;
 using PuntoDeVenta.API.DTOs;
@@ -306,8 +307,9 @@ namespace PuntoDeVenta.API.Controllers
         {
             try
             {
-                var hoyInicio = DateTime.UtcNow.Date;
-                var hoyFin = DateTime.UtcNow.Date.AddDays(1).AddSeconds(-1);
+                // Calcular "hoy" en zona Argentina y convertir a UTC para filtrar
+                var hoyInicio = DateTimeHelper.GetArgentinaDayStartUtc(DateTimeHelper.GetArgentinaToday());
+                var hoyFin = DateTimeHelper.GetArgentinaDayEndUtc(DateTimeHelper.GetArgentinaToday());
 
                 var movimientos = await _unitOfWork.Movimientos.GetConDetallesAsync();
                 var movimientosHoy = movimientos.Where(m =>

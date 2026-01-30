@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using Capa_Datos;
 using Capa_Datos.Interfaces;
 using PuntoDeVenta.API.DTOs;
 
@@ -122,7 +123,7 @@ namespace PuntoDeVenta.API.Controllers
                 // Generar PDF
                 var pdfBytes = GenerarPdfPresupuesto(
                     venta.No_Factura,
-                    venta.Fecha_Venta ?? DateTime.Now,
+                    venta.Fecha_Venta.HasValue ? DateTimeHelper.ConvertUtcToArgentina(venta.Fecha_Venta.Value) : DateTimeHelper.GetArgentinaNow(),
                     clienteNombre,
                     clienteDocumento,
                     clienteDomicilio,
@@ -281,12 +282,13 @@ namespace PuntoDeVenta.API.Controllers
                 }
 
                 decimal total = detalles.Sum(d => d.Monto_Total ?? 0);
-                string noPresupuesto = $"P-{DateTime.Now:yyMMddHHmmss}";
+                var ahora = DateTimeHelper.GetArgentinaNow();
+                string noPresupuesto = $"P-{ahora:yyMMddHHmmss}";
 
                 // Generar PDF
                 var pdfBytes = GenerarPdfPresupuesto(
                     noPresupuesto,
-                    DateTime.Now,
+                    ahora,
                     clienteNombre,
                     clienteDocumento,
                     clienteDomicilio,
@@ -997,7 +999,7 @@ namespace PuntoDeVenta.API.Controllers
                 col.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                 col.Item().PaddingTop(5).Row(row =>
                 {
-                    row.RelativeItem().Text($"Generado: {DateTime.Now:dd/MM/yyyy HH:mm:ss}")
+                    row.RelativeItem().Text($"Generado: {DateTimeHelper.GetArgentinaNow():dd/MM/yyyy HH:mm:ss}")
                         .FontSize(7)
                         .FontColor(Colors.Grey.Darken1);
                     row.RelativeItem().AlignRight().Text("Gestión POS")

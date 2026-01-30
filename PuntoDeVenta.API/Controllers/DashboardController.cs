@@ -307,11 +307,12 @@ namespace PuntoDeVenta.API.Controllers
             }
 
             // Si no hay datos reales, generar estructura vacia para los ultimos 7 dias
+            var hoyArgentina = DateTimeHelper.GetArgentinaToday();
             for (int i = 6; i >= 0; i--)
             {
                 ventas.Add(new VentaDiariaDTO
                 {
-                    Fecha = DateTime.Today.AddDays(-i),
+                    Fecha = hoyArgentina.AddDays(-i),
                     Total = 0,
                     CantidadVentas = 0
                 });

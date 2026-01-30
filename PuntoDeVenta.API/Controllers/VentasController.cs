@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Capa_Datos;
 using Capa_Datos.Interfaces;
 using Capa_Entidad;
 using PuntoDeVenta.API.DTOs;
@@ -43,12 +44,12 @@ namespace PuntoDeVenta.API.Controllers
                     cancelada = filtro.Estado.ToUpper() == "CANCELADA";
                 }
 
-                // Convertir fechas a UTC para PostgreSQL
+                // Convertir fechas de Argentina a UTC para PostgreSQL
                 DateTime? fechaDesdeUtc = filtro.FechaDesde.HasValue
-                    ? DateTime.SpecifyKind(filtro.FechaDesde.Value, DateTimeKind.Utc)
+                    ? DateTimeHelper.GetArgentinaDayStartUtc(filtro.FechaDesde.Value)
                     : null;
                 DateTime? fechaHastaUtc = filtro.FechaHasta.HasValue
-                    ? DateTime.SpecifyKind(filtro.FechaHasta.Value.AddDays(1), DateTimeKind.Utc)
+                    ? DateTimeHelper.GetArgentinaDayEndUtc(filtro.FechaHasta.Value)
                     : null;
 
                 var (ventas, totalCount) = await _unitOfWork.Ventas.GetPaginadoAsync(
@@ -262,7 +263,7 @@ namespace PuntoDeVenta.API.Controllers
                         ClienteNombre = clienteNombre,
                         IdUsuario = userId,
                         UsuarioNombre = userName,
-                        Fecha = venta.Fecha_Venta ?? DateTime.Now,
+                        Fecha = venta.Fecha_Venta ?? DateTime.UtcNow,
                         Subtotal = subtotal,
                         Descuento = dto.Descuento,
                         Total = total,
@@ -393,12 +394,13 @@ namespace PuntoDeVenta.API.Controllers
         {
             try
             {
-                var fechaDesdeLocal = desde ?? DateTime.Today.AddDays(-30);
-                var fechaHastaLocal = (hasta ?? DateTime.Today).AddDays(1);
+                // Usar fecha de Argentina si no se especifica
+                var fechaDesdeArg = desde ?? DateTimeHelper.GetArgentinaToday().AddDays(-30);
+                var fechaHastaArg = hasta ?? DateTimeHelper.GetArgentinaToday();
 
-                // Convertir a UTC para PostgreSQL
-                var fechaDesde = DateTime.SpecifyKind(fechaDesdeLocal, DateTimeKind.Utc);
-                var fechaHasta = DateTime.SpecifyKind(fechaHastaLocal, DateTimeKind.Utc);
+                // Convertir fechas de Argentina a UTC para PostgreSQL
+                var fechaDesde = DateTimeHelper.GetArgentinaDayStartUtc(fechaDesdeArg);
+                var fechaHasta = DateTimeHelper.GetArgentinaDayEndUtc(fechaHastaArg);
 
                 // Obtener todas las ventas no canceladas en el rango
                 var (ventas, _) = await _unitOfWork.Ventas.GetPaginadoAsync(
@@ -498,7 +500,7 @@ namespace PuntoDeVenta.API.Controllers
                 ClienteNombre = clienteNombre,
                 IdUsuario = venta.Id_Usuario ?? 0,
                 UsuarioNombre = usuarioNombre ?? "Usuario",
-                Fecha = venta.Fecha_Venta ?? DateTime.Now,
+                Fecha = venta.Fecha_Venta ?? DateTime.UtcNow,
                 Subtotal = venta.Monto_Total,
                 Descuento = 0, // El legacy no guarda descuento separado
                 Total = venta.Monto_Total,

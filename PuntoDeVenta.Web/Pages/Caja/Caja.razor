@@ -1,6 +1,7 @@
 @page "/caja"
 @attribute [Authorize]
 @using PuntoDeVenta.Web.Services
+@using PuntoDeVenta.Web.Helpers
 @inject IVentaService VentaService
 @inject IToastService ToastService
 @inject IJSRuntime JS
@@ -443,7 +444,7 @@ else
     private bool isDownloading = false;
 
     // Fecha seleccionada
-    private DateTime fechaSeleccionada = DateTime.Today;
+    private DateTime fechaSeleccionada = DateTimeArgentina.Today;
 
     // Filtros
     private string filtro = "";
@@ -464,7 +465,7 @@ else
     }
 
     // Metodos de navegacion de fecha
-    private bool EsHoy() => fechaSeleccionada.Date == DateTime.Today;
+    private bool EsHoy() => fechaSeleccionada.Date == DateTimeArgentina.Today;
 
     private async Task OnFechaChanged()
     {
@@ -473,7 +474,7 @@ else
 
     private async Task IrAHoy()
     {
-        fechaSeleccionada = DateTime.Today;
+        fechaSeleccionada = DateTimeArgentina.Today;
         await LoadVentasCaja();
     }
 

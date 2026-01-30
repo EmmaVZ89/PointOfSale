@@ -104,11 +104,8 @@ namespace Capa_Datos.Repositories
         public string GenerarNumeroFactura()
         {
             // Formato legacy: F-YYMMDDHHmm
-            // Usa zona horaria Argentina (UTC-3)
-            var argentinaTime = TimeZoneInfo.ConvertTimeFromUtc(
-                DateTime.UtcNow,
-                TimeZoneInfo.FindSystemTimeZoneById("Argentina Standard Time"));
-
+            // Usa zona horaria Argentina (UTC-3) - compatible Windows y Linux
+            var argentinaTime = DateTimeHelper.GetArgentinaNow();
             return $"F-{argentinaTime:yyMMddHHmm}";
         }
     }

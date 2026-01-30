@@ -2,6 +2,7 @@
 @page "/dashboard"
 @attribute [Authorize]
 @using PuntoDeVenta.Web.Services
+@using PuntoDeVenta.Web.Helpers
 @inject IDashboardService DashboardService
 @inject NavigationManager Navigation
 @inject IToastService ToastService
@@ -17,7 +18,7 @@
         </div>
         <div class="header-date">
             <i class="bi bi-calendar3"></i>
-            @DateTime.Now.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))
+            @DateTimeArgentina.FormatLongDate()
         </div>
     </div>
 
@@ -805,7 +806,7 @@
         return Enumerable.Range(0, 7)
             .Select(i => new VentaDiaria
             {
-                Fecha = DateTime.Today.AddDays(-6 + i),
+                Fecha = DateTimeArgentina.Today.AddDays(-6 + i),
                 Total = 0,
                 CantidadVentas = 0
             })
