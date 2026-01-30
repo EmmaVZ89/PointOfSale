@@ -442,6 +442,9 @@ namespace PuntoDeVenta.API.Controllers
 
                 col.Item().PaddingTop(20);
 
+                // DEBUG: Mostrar cantidad de detalles
+                col.Item().Text($"[DEBUG] Detalles encontrados: {detalles.Count}").FontSize(8).FontColor(Colors.Red.Medium);
+
                 // Tabla de productos (formato legacy)
                 col.Item().Table(table =>
                 {
