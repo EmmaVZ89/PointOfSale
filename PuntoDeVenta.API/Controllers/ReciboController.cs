@@ -1036,6 +1036,67 @@ namespace PuntoDeVenta.API.Controllers
         }
 
         #endregion
+
+        #region Debug Endpoints (TEMPORAL - ELIMINAR EN PRODUCCION)
+
+        /// <summary>
+        /// Endpoint de diagnóstico para verificar acceso a Ventas_Detalle.
+        /// ELIMINAR DESPUES DE RESOLVER EL PROBLEMA.
+        /// </summary>
+        [HttpGet("debug/detalles/{idVenta}")]
+        public async Task<IActionResult> DebugDetalles(int idVenta)
+        {
+            try
+            {
+                // 1. Contar todos los registros en la tabla
+                var totalCount = await _unitOfWork.VentaDetalles.CountAsync();
+
+                // 2. Obtener detalles para el idVenta específico
+                var detalles = await _unitOfWork.VentaDetalles.GetByVentaAsync(idVenta);
+                var detallesList = detalles.ToList();
+
+                // 3. Obtener algunos registros de muestra (primeros 5)
+                var muestra = await _unitOfWork.VentaDetalles.GetAllAsync();
+                var muestraList = muestra.Take(5).Select(d => new
+                {
+                    d.Id_Detalle,
+                    d.Id_Venta,
+                    d.Id_Articulo,
+                    d.Cantidad,
+                    d.Precio_Venta,
+                    d.Monto_Total
+                }).ToList();
+
+                return Ok(new
+                {
+                    mensaje = "Diagnóstico de Ventas_Detalle",
+                    totalRegistrosEnTabla = totalCount,
+                    idVentaBuscado = idVenta,
+                    detallesEncontrados = detallesList.Count,
+                    detalles = detallesList.Select(d => new
+                    {
+                        d.Id_Detalle,
+                        d.Id_Venta,
+                        d.Id_Articulo,
+                        d.Cantidad,
+                        d.Precio_Venta,
+                        d.Monto_Total
+                    }),
+                    muestraPrimeros5 = muestraList
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace,
+                    innerException = ex.InnerException?.Message
+                });
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>
