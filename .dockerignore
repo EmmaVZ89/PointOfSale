@@ -1,0 +1,29 @@
+# Excluir archivos de configuración de la raíz (conflictan con los de PuntoDeVenta.API)
+appsettings.json
+appsettings.local.json
+appsettings.example.json
+appsettings.local.json.example
+
+# Excluir proyectos que no son necesarios para la API
+PuntoDeVenta/
+PuntoDeVenta.Web/
+Manual/
+Query Inicial/
+
+# Archivos de desarrollo
+*.md
+.git/
+.gitignore
+.vs/
+bin/
+obj/
+*.user
+*.suo
+
+# Docker y Railway config (no necesarios dentro del container)
+docker-compose.yml
+railway.json
+.railwayignore
+
+# Otros
+logo_d.png
