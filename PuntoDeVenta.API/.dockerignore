@@ -1,15 +1,12 @@
-# .dockerignore para PuntoDeVenta.Web (raiz)
-# Para API, usar PuntoDeVenta.API/.dockerignore
-
 # Excluir archivos de configuración de la raíz
 appsettings.json
 appsettings.local.json
 appsettings.example.json
 appsettings.local.json.example
 
-# Excluir proyectos que no son necesarios para Web
+# Excluir proyectos que no son necesarios para la API
 PuntoDeVenta/
-PuntoDeVenta.API/
+PuntoDeVenta.Web/
 Manual/
 Query Inicial/
 
@@ -18,13 +15,14 @@ Query Inicial/
 .git/
 .gitignore
 .vs/
-**/bin/
-**/obj/
+bin/
+obj/
 *.user
 *.suo
 
-# Docker y Railway config (no necesarios dentro del container)
+# Docker y Railway config
 docker-compose.yml
+railway.json
 .railwayignore
 
 # Otros
