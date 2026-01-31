@@ -211,10 +211,18 @@ try
 
     var healthChecksBuilder = builder.Services.AddHealthChecks();
 
-    // Solo agregar check de PostgreSQL si hay connection string válido
+    // Health check básico (liveness) - siempre responde healthy
+    healthChecksBuilder.AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
+
+    // Check de PostgreSQL opcional con timeout corto (solo para readiness, no bloquea liveness)
     if (!string.IsNullOrEmpty(connectionString))
     {
-        healthChecksBuilder.AddNpgSql(connectionString, name: "postgresql", tags: new[] { "db", "ready" });
+        healthChecksBuilder.AddNpgSql(
+            connectionString,
+            name: "postgresql",
+            failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded,
+            tags: new[] { "db", "ready" },
+            timeout: TimeSpan.FromSeconds(5));
     }
 
     // Funcion para convertir DATABASE_URL (formato Railway) a connection string .NET
@@ -332,8 +340,16 @@ try
     // ============================================
     // HEALTH CHECK ENDPOINT
     // ============================================
+    // Health check principal - tolerante (acepta Degraded como healthy para Railway)
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
     {
+        // Considerar Degraded como Healthy para que Railway no reinicie el servicio
+        ResultStatusCodes =
+        {
+            [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy] = StatusCodes.Status200OK,
+            [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded] = StatusCodes.Status200OK,
+            [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+        },
         ResponseWriter = async (context, report) =>
         {
             context.Response.ContentType = "application/json";
