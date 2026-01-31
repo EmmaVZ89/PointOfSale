@@ -45,13 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Copiar appsettings.json desde la raiz -->
-    <None Include="..\appsettings.json" Link="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- Logo para presupuestos PDF -->
     <EmbeddedResource Include="Resources\logo_presupuesto.png" />
   </ItemGroup>
