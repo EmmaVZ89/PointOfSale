@@ -398,6 +398,48 @@ try
         }
     });
 
+    // DEBUG: Probar con UnitOfWork (mismo flujo que ReciboController)
+    app.MapGet("/debug/uow-test/{idVenta}", async (int idVenta, Capa_Datos.Interfaces.IUnitOfWork uow) =>
+    {
+        try
+        {
+            // Exactamente como lo hace ReciboController
+            var venta = await uow.Ventas.GetByIdAsync(idVenta);
+            var detalles = await uow.VentaDetalles.GetByVentaConProductoAsync(idVenta);
+            var detallesList = detalles.ToList();
+
+            return Results.Ok(new
+            {
+                idVentaBuscado = idVenta,
+                ventaEncontrada = venta != null,
+                ventaNoFactura = venta?.No_Factura,
+                ventaMontoTotal = venta?.Monto_Total,
+                detallesCount = detallesList.Count,
+                detalles = detallesList.Select(d => new
+                {
+                    d.Id_Detalle,
+                    d.Id_Venta,
+                    d.Id_Articulo,
+                    d.Cantidad,
+                    d.Precio_Venta,
+                    d.Monto_Total,
+                    d.NombreProducto,
+                    d.CodigoProducto
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            return Results.Ok(new
+            {
+                error = true,
+                mensaje = ex.Message,
+                inner = ex.InnerException?.Message,
+                stack = ex.StackTrace
+            });
+        }
+    });
+
     // ============================================
     // MAPEAR CONTROLADORES
     // ============================================
