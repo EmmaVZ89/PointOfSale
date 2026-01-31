@@ -31,6 +31,17 @@ RUN dotnet publish "PuntoDeVenta.API.csproj" -c Release -o /app/publish /p:UseAp
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
+# Instalar dependencias nativas para QuestPDF/SkiaSharp
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libfontconfig1 \
+    libfreetype6 \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libc6 \
+    libgdiplus \
+    && rm -rf /var/lib/apt/lists/*
+
 # Crear usuario non-root para seguridad (OWASP)
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
