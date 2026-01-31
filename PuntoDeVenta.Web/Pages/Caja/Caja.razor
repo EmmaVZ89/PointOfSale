@@ -48,17 +48,30 @@
             <AuthorizeView Roles="Admin">
                 <Authorized>
                     <div class="col-auto ms-auto">
-                        <button class="btn btn-outline-primary" @onclick="DescargarReporteCaja" disabled="@isDownloading">
-                            @if (isDownloading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-file-earmark-pdf me-1"></i>
-                            }
-                            Descargar Reporte
-                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" @onclick="DescargarReporteCaja" disabled="@isDownloading">
+                                @if (isDownloading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>
+                                }
+                                Descargar Reporte
+                            </button>
+                            <button class="btn btn-outline-success" @onclick="DescargarGanancias" disabled="@isDownloadingGanancias">
+                                @if (isDownloadingGanancias)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-graph-up-arrow me-1"></i>
+                                }
+                                Descargar Ganancias
+                            </button>
+                        </div>
                     </div>
                 </Authorized>
             </AuthorizeView>
@@ -442,6 +455,7 @@ else
     private bool isLoadingDetalle = false;
     private bool isCancelling = false;
     private bool isDownloading = false;
+    private bool isDownloadingGanancias = false;
 
     // Fecha seleccionada
     private DateTime fechaSeleccionada = DateTimeArgentina.Today;
@@ -637,6 +651,40 @@ else
         finally
         {
             isDownloading = false;
+        }
+    }
+
+    private async Task DescargarGanancias()
+    {
+        isDownloadingGanancias = true;
+        StateHasChanged();
+
+        try
+        {
+            ToastService.ShowInfo("Generando reporte de ganancias...");
+
+            var pdfBytes = await VentaService.GetGananciasPdfAsync(fechaSeleccionada);
+
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                var base64 = Convert.ToBase64String(pdfBytes);
+                var fileName = $"ReporteGanancias_{fechaSeleccionada:yyyyMMdd}.pdf";
+                await JS.InvokeVoidAsync("downloadPdfFile", base64, fileName);
+                ToastService.ShowSuccess("Reporte de ganancias generado correctamente");
+            }
+            else
+            {
+                ToastService.ShowWarning("No se pudo generar el reporte de ganancias");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al generar reporte de ganancias: {ex.Message}");
+        }
+        finally
+        {
+            isDownloadingGanancias = false;
+            StateHasChanged();
         }
     }
 

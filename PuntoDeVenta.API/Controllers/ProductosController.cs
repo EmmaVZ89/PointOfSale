@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,12 +40,16 @@ namespace PuntoDeVenta.API.Controllers
         /// <summary>
         /// Obtiene todos los productos (activos e inactivos).
         /// Usa query param ?soloActivos=true para filtrar solo activos.
+        /// Incluye CostoUnitario solo para usuarios Admin.
         /// </summary>
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ProductoDTO>>>> GetAll([FromQuery] bool soloActivos = false)
         {
             try
             {
+                // Verificar si el usuario es Admin para mostrar costos
+                var isAdmin = User.IsInRole("Admin");
+
                 IEnumerable<CE_Productos> productos;
 
                 if (soloActivos)
@@ -81,7 +86,9 @@ namespace PuntoDeVenta.API.Controllers
                     UnidadMedida = p.UnidadMedida,
                     Descripcion = p.Descripcion,
                     TieneImagen = p.Img != null && p.Img.Length > 0,
-                    CantidadPresentaciones = presentacionesCount.ContainsKey(p.IdArticulo) ? presentacionesCount[p.IdArticulo] : 0
+                    CantidadPresentaciones = presentacionesCount.ContainsKey(p.IdArticulo) ? presentacionesCount[p.IdArticulo] : 0,
+                    // Solo incluir costo para Admin
+                    CostoUnitario = isAdmin ? p.CostoUnitario : null
                 }).OrderBy(p => p.Nombre);
 
                 return Ok(ApiResponse<IEnumerable<ProductoDTO>>.Ok(productosDTO));
@@ -121,13 +128,15 @@ namespace PuntoDeVenta.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene un producto por ID
+        /// Obtiene un producto por ID.
+        /// Incluye CostoUnitario solo para usuarios Admin.
         /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<ProductoDTO>>> GetById(int id)
         {
             try
             {
+                var isAdmin = User.IsInRole("Admin");
                 var producto = await _unitOfWork.Productos.GetByIdAsync(id);
 
                 if (producto == null)
@@ -149,7 +158,8 @@ namespace PuntoDeVenta.API.Controllers
                     Cantidad = producto.Cantidad,
                     UnidadMedida = producto.UnidadMedida,
                     Descripcion = producto.Descripcion,
-                    TieneImagen = producto.Img != null && producto.Img.Length > 0
+                    TieneImagen = producto.Img != null && producto.Img.Length > 0,
+                    CostoUnitario = isAdmin ? producto.CostoUnitario : null
                 };
 
                 return Ok(ApiResponse<ProductoDTO>.Ok(productoDTO));
@@ -347,7 +357,8 @@ namespace PuntoDeVenta.API.Controllers
         }
 
         /// <summary>
-        /// Actualiza un producto
+        /// Actualiza un producto.
+        /// Si se proporciona CostoUnitario y es diferente al actual, se registra en histórico.
         /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
@@ -372,6 +383,28 @@ namespace PuntoDeVenta.API.Controllers
                 if (!string.IsNullOrEmpty(dto.UnidadMedida)) producto.UnidadMedida = dto.UnidadMedida;
                 if (dto.Descripcion != null) producto.Descripcion = dto.Descripcion;
 
+                // Manejar costo unitario - solo si es diferente al actual
+                if (dto.CostoUnitario.HasValue && dto.CostoUnitario != producto.CostoUnitario)
+                {
+                    // Obtener usuario actual
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                    var userId = int.TryParse(userIdClaim?.Value, out var uid) ? uid : (int?)null;
+
+                    // Registrar en histórico
+                    var costoHistorico = new CE_ProductoCostoHistorico
+                    {
+                        IdArticulo = id,
+                        CostoUnitario = dto.CostoUnitario.Value,
+                        FechaRegistro = DateTime.UtcNow,
+                        IdUsuarioRegistro = userId
+                    };
+
+                    await _unitOfWork.ProductoCostos.AddAsync(costoHistorico);
+
+                    // Actualizar cache en producto
+                    producto.CostoUnitario = dto.CostoUnitario.Value;
+                }
+
                 await _unitOfWork.Productos.UpdateAsync(producto);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -389,7 +422,8 @@ namespace PuntoDeVenta.API.Controllers
                     Cantidad = producto.Cantidad,
                     UnidadMedida = producto.UnidadMedida,
                     Descripcion = producto.Descripcion,
-                    TieneImagen = producto.Img != null && producto.Img.Length > 0
+                    TieneImagen = producto.Img != null && producto.Img.Length > 0,
+                    CostoUnitario = producto.CostoUnitario
                 };
 
                 return Ok(ApiResponse<ProductoDTO>.Ok(productoDTO, "Producto actualizado exitosamente"));
@@ -462,5 +496,140 @@ namespace PuntoDeVenta.API.Controllers
                 return StatusCode(500, ApiResponse<IEnumerable<ProductoDTO>>.Error(ex.Message));
             }
         }
+
+        #region Endpoints de Costo (Solo Admin)
+
+        /// <summary>
+        /// Obtiene el último costo de compra de un producto (Admin)
+        /// </summary>
+        [HttpGet("{id}/costo")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<decimal?>>> GetCosto(int id)
+        {
+            try
+            {
+                var producto = await _unitOfWork.Productos.GetByIdAsync(id);
+
+                if (producto == null)
+                {
+                    return NotFound(ApiResponse<decimal?>.Error("Producto no encontrado"));
+                }
+
+                return Ok(ApiResponse<decimal?>.Ok(producto.CostoUnitario));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<decimal?>.Error(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Actualiza el costo de compra de un producto (Admin).
+        /// Registra en histórico si el costo es diferente al actual.
+        /// </summary>
+        [HttpPut("{id}/costo")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<bool>>> UpdateCosto(int id, [FromBody] ActualizarCostoDTO dto)
+        {
+            try
+            {
+                var producto = await _unitOfWork.Productos.GetByIdAsync(id);
+
+                if (producto == null)
+                {
+                    return NotFound(ApiResponse<bool>.Error("Producto no encontrado"));
+                }
+
+                // Solo registrar si el costo es diferente al actual
+                if (producto.CostoUnitario != dto.CostoUnitario)
+                {
+                    // Obtener usuario actual
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                    var userId = int.TryParse(userIdClaim?.Value, out var uid) ? uid : (int?)null;
+
+                    // Registrar en histórico
+                    var costoHistorico = new CE_ProductoCostoHistorico
+                    {
+                        IdArticulo = id,
+                        CostoUnitario = dto.CostoUnitario,
+                        FechaRegistro = DateTime.UtcNow,
+                        IdUsuarioRegistro = userId
+                    };
+
+                    await _unitOfWork.ProductoCostos.AddAsync(costoHistorico);
+
+                    // Actualizar cache en producto
+                    producto.CostoUnitario = dto.CostoUnitario;
+                    await _unitOfWork.Productos.UpdateAsync(producto);
+
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return Ok(ApiResponse<bool>.Ok(true, "Costo actualizado exitosamente"));
+                }
+
+                return Ok(ApiResponse<bool>.Ok(true, "El costo no ha cambiado"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<bool>.Error(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Obtiene el histórico de costos de un producto (Admin)
+        /// </summary>
+        [HttpGet("{id}/costos-historico")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<CostoHistoricoDTO>>>> GetCostosHistorico(int id)
+        {
+            try
+            {
+                var producto = await _unitOfWork.Productos.GetByIdAsync(id);
+
+                if (producto == null)
+                {
+                    return NotFound(ApiResponse<IEnumerable<CostoHistoricoDTO>>.Error("Producto no encontrado"));
+                }
+
+                var historico = await _unitOfWork.ProductoCostos.GetHistoricoAsync(id);
+
+                // Obtener nombres de usuarios que registraron costos
+                var usuarioIds = historico
+                    .Where(h => h.IdUsuarioRegistro.HasValue)
+                    .Select(h => h.IdUsuarioRegistro.Value)
+                    .Distinct()
+                    .ToList();
+
+                var usuarios = new Dictionary<int, string>();
+                foreach (var uid in usuarioIds)
+                {
+                    var user = await _unitOfWork.Usuarios.GetByIdAsync(uid);
+                    if (user != null)
+                    {
+                        usuarios[uid] = user.Nombre;
+                    }
+                }
+
+                var historicoDTO = historico.Select(h => new CostoHistoricoDTO
+                {
+                    IdCostoHistorico = h.IdCostoHistorico,
+                    IdArticulo = h.IdArticulo,
+                    CostoUnitario = h.CostoUnitario,
+                    FechaRegistro = h.FechaRegistro,
+                    IdUsuarioRegistro = h.IdUsuarioRegistro,
+                    NombreUsuario = h.IdUsuarioRegistro.HasValue && usuarios.ContainsKey(h.IdUsuarioRegistro.Value)
+                        ? usuarios[h.IdUsuarioRegistro.Value]
+                        : null
+                });
+
+                return Ok(ApiResponse<IEnumerable<CostoHistoricoDTO>>.Ok(historicoDTO));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<IEnumerable<CostoHistoricoDTO>>.Error(ex.Message));
+            }
+        }
+
+        #endregion
     }
 }

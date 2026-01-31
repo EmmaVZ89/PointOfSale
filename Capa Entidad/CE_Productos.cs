@@ -18,6 +18,7 @@ namespace Capa_Entidad
         private string unidadMedida;
         private byte[] img;
         private string descripcion;
+        private decimal? costoUnitario;
 
         public int IdArticulo { get => idArticulo; set => idArticulo = value; }
         public string Nombre { get => nombre; set => nombre = value; }
@@ -29,5 +30,10 @@ namespace Capa_Entidad
         public string UnidadMedida { get => unidadMedida; set => unidadMedida = value; }
         public byte[] Img { get => img; set => img = value; }
         public string Descripcion { get => descripcion; set => descripcion = value; }
+        /// <summary>
+        /// Último costo de compra unitario registrado (cache del histórico).
+        /// Solo visible para administradores.
+        /// </summary>
+        public decimal? CostoUnitario { get => costoUnitario; set => costoUnitario = value; }
     }
 }

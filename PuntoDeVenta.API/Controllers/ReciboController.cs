@@ -1011,6 +1011,435 @@ namespace PuntoDeVenta.API.Controllers
         }
 
         #endregion
+
+        #region Reporte de Ganancias
+
+        /// <summary>
+        /// Genera un reporte PDF de ganancias diario (solo Admin).
+        /// Usa el costo histórico vigente a la fecha del reporte.
+        /// </summary>
+        [HttpGet("ganancias/{fecha}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GenerarReporteGanancias(DateTime fecha)
+        {
+            try
+            {
+                // Convertir fecha a UTC para PostgreSQL
+                var fechaInicio = DateTimeHelper.GetArgentinaDayStartUtc(fecha);
+                var fechaFin = DateTimeHelper.GetArgentinaDayEndUtc(fecha);
+
+                // Obtener ventas no canceladas del día
+                var (ventas, _) = await _unitOfWork.Ventas.GetPaginadoAsync(
+                    idCliente: null,
+                    idUsuario: null,
+                    fechaDesde: fechaInicio,
+                    fechaHasta: fechaFin,
+                    cancelada: false,
+                    pagina: 1,
+                    tamanioPagina: 10000);
+
+                var ventasList = ventas.ToList();
+
+                if (!ventasList.Any())
+                {
+                    // Generar PDF vacío con mensaje
+                    var pdfVacio = GenerarPdfGananciasVacio(fecha);
+                    return File(pdfVacio, "application/pdf", $"ReporteGanancias_{fecha:yyyyMMdd}.pdf");
+                }
+
+                // Recopilar todos los artículos vendidos
+                var articulosIds = new HashSet<int>();
+                var detallesPorVenta = new Dictionary<int, List<Capa_Entidad.CE_VentaDetalle>>();
+
+                foreach (var venta in ventasList)
+                {
+                    var detalles = await _unitOfWork.VentaDetalles.GetByVentaConProductoAsync(venta.Id_Venta);
+                    var detallesList = detalles.ToList();
+                    detallesPorVenta[venta.Id_Venta] = detallesList;
+
+                    foreach (var det in detallesList)
+                    {
+                        if (det.Id_Articulo.HasValue)
+                            articulosIds.Add(det.Id_Articulo.Value);
+                    }
+                }
+
+                // Obtener costos vigentes a la fecha del reporte
+                var costosVigentes = await _unitOfWork.ProductoCostos.GetCostosVigentesAsync(articulosIds, fechaFin);
+
+                // Procesar ganancias
+                var gananciasDict = new Dictionary<string, GananciaItem>();
+                var productosSinCosto = new HashSet<int>();
+
+                foreach (var venta in ventasList)
+                {
+                    var detalles = detallesPorVenta[venta.Id_Venta];
+
+                    foreach (var detalle in detalles)
+                    {
+                        var idArticulo = detalle.Id_Articulo ?? 0;
+                        if (idArticulo == 0) continue;
+
+                        // Obtener nombre de presentación
+                        string presentacionNombre = "Unidad";
+                        if (detalle.IdPresentacion.HasValue)
+                        {
+                            var presentacion = await _unitOfWork.Presentaciones.GetByIdAsync(detalle.IdPresentacion.Value);
+                            presentacionNombre = presentacion?.Nombre ?? "Unidad";
+                        }
+
+                        // Calcular unidades totales
+                        var unidadesPorPresentacion = detalle.CantidadUnidadesPorPresentacion > 0
+                            ? detalle.CantidadUnidadesPorPresentacion
+                            : 1;
+                        var unidadesTotales = detalle.Cantidad * unidadesPorPresentacion;
+
+                        // Obtener costo vigente a la fecha
+                        decimal costoUnitario = 0;
+                        if (costosVigentes.TryGetValue(idArticulo, out var costo))
+                        {
+                            costoUnitario = costo;
+                        }
+                        else
+                        {
+                            productosSinCosto.Add(idArticulo);
+                        }
+
+                        var costoTotal = unidadesTotales * costoUnitario;
+                        var ingresoTotal = detalle.Monto_Total ?? 0m;
+                        var ganancia = ingresoTotal - costoTotal;
+
+                        // Clave única por producto + presentación
+                        var key = $"{idArticulo}_{detalle.IdPresentacion ?? 0}";
+
+                        if (gananciasDict.ContainsKey(key))
+                        {
+                            var existing = gananciasDict[key];
+                            existing.CantidadVendida += detalle.Cantidad;
+                            existing.UnidadesTotales += unidadesTotales;
+                            existing.CostoTotal += costoTotal;
+                            existing.IngresoTotal += ingresoTotal;
+                            existing.GananciaBruta += ganancia;
+                        }
+                        else
+                        {
+                            gananciasDict[key] = new GananciaItem
+                            {
+                                IdArticulo = idArticulo,
+                                Codigo = detalle.CodigoProducto ?? "",
+                                Nombre = detalle.NombreProducto ?? "Producto",
+                                Presentacion = presentacionNombre,
+                                UnidadesPorPresentacion = unidadesPorPresentacion,
+                                CantidadVendida = detalle.Cantidad,
+                                UnidadesTotales = unidadesTotales,
+                                PrecioVenta = detalle.Precio_Venta ?? 0,
+                                CostoUnitario = costoUnitario,
+                                CostoTotal = costoTotal,
+                                IngresoTotal = ingresoTotal,
+                                GananciaBruta = ganancia
+                            };
+                        }
+                    }
+                }
+
+                // Calcular margen porcentaje
+                foreach (var item in gananciasDict.Values)
+                {
+                    if (item.CostoTotal > 0)
+                    {
+                        item.MargenPorcentaje = (item.GananciaBruta / item.CostoTotal) * 100;
+                    }
+                    else if (item.IngresoTotal > 0)
+                    {
+                        item.MargenPorcentaje = 100;
+                    }
+                }
+
+                // Generar PDF
+                var productos = gananciasDict.Values.OrderByDescending(g => g.GananciaBruta).ToList();
+                var pdfBytes = GenerarPdfGanancias(fecha, productos, productosSinCosto.Count);
+
+                return File(pdfBytes, "application/pdf", $"ReporteGanancias_{fecha:yyyyMMdd}.pdf");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.Error($"Error al generar reporte: {ex.Message}"));
+            }
+        }
+
+        private byte[] GenerarPdfGananciasVacio(DateTime fecha)
+        {
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(30);
+                    page.DefaultTextStyle(x => x.FontSize(9));
+
+                    page.Header().Element(c => ComposeGananciasHeader(c, fecha));
+                    page.Content().AlignCenter().AlignMiddle().Column(col =>
+                    {
+                        col.Item().Text("No hay ventas registradas para esta fecha")
+                            .FontSize(14)
+                            .FontColor(Colors.Grey.Darken1);
+                    });
+                    page.Footer().Element(ComposeCajaFooter);
+                });
+            });
+
+            return document.GeneratePdf();
+        }
+
+        private byte[] GenerarPdfGanancias(DateTime fecha, List<GananciaItem> productos, int productosSinCosto)
+        {
+            var totalIngresos = productos.Sum(p => p.IngresoTotal);
+            var totalCostos = productos.Sum(p => p.CostoTotal);
+            var totalGanancias = totalIngresos - totalCostos;
+            var margenGlobal = totalCostos > 0 ? (totalGanancias / totalCostos) * 100 : 100;
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4.Landscape());
+                    page.Margin(25);
+                    page.DefaultTextStyle(x => x.FontSize(8));
+
+                    page.Header().Element(c => ComposeGananciasHeader(c, fecha));
+                    page.Content().Element(c => ComposeGananciasContent(c, productos, totalIngresos, totalCostos, totalGanancias, margenGlobal, productosSinCosto));
+                    page.Footer().Element(ComposeCajaFooter);
+                });
+            });
+
+            return document.GeneratePdf();
+        }
+
+        private void ComposeGananciasHeader(IContainer container, DateTime fecha)
+        {
+            container.Column(column =>
+            {
+                column.Item().Row(row =>
+                {
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text("PUNTO DE VENTA")
+                            .FontSize(20)
+                            .Bold()
+                            .FontColor(Colors.Green.Darken3);
+                        col.Item().Text("Sistema de Gestión Comercial")
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken1);
+                    });
+
+                    row.ConstantItem(220).AlignRight().Column(col =>
+                    {
+                        col.Item().Text("REPORTE DE GANANCIAS")
+                            .FontSize(14)
+                            .Bold()
+                            .FontColor(Colors.Green.Darken2);
+                        col.Item().Text(fecha.ToString("dddd, dd 'de' MMMM 'de' yyyy",
+                            new System.Globalization.CultureInfo("es-ES")))
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken2);
+                    });
+                });
+
+                column.Item().PaddingVertical(8).LineHorizontal(2).LineColor(Colors.Green.Darken3);
+            });
+        }
+
+        private void ComposeGananciasContent(
+            IContainer container,
+            List<GananciaItem> productos,
+            decimal totalIngresos,
+            decimal totalCostos,
+            decimal totalGanancias,
+            decimal margenGlobal,
+            int productosSinCosto)
+        {
+            container.Column(mainCol =>
+            {
+                // SECCION 1: KPIs RESUMEN
+                mainCol.Item().PaddingBottom(12).Row(row =>
+                {
+                    // KPI Ingresos
+                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
+                        .Background(Colors.Blue.Lighten5).Padding(8).Column(c =>
+                    {
+                        c.Item().Text("INGRESOS TOTALES").FontSize(7).FontColor(Colors.Grey.Darken1);
+                        c.Item().Text($"${totalIngresos:N0}").FontSize(16).Bold().FontColor(Colors.Blue.Darken2);
+                    });
+
+                    row.ConstantItem(8);
+
+                    // KPI Costos
+                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
+                        .Background(Colors.Orange.Lighten5).Padding(8).Column(c =>
+                    {
+                        c.Item().Text("COSTOS TOTALES").FontSize(7).FontColor(Colors.Grey.Darken1);
+                        c.Item().Text($"${totalCostos:N0}").FontSize(16).Bold().FontColor(Colors.Orange.Darken2);
+                    });
+
+                    row.ConstantItem(8);
+
+                    // KPI Ganancia
+                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
+                        .Background(Colors.Green.Lighten5).Padding(8).Column(c =>
+                    {
+                        c.Item().Text("GANANCIA BRUTA").FontSize(7).FontColor(Colors.Grey.Darken1);
+                        c.Item().Text($"${totalGanancias:N0}").FontSize(16).Bold().FontColor(Colors.Green.Darken2);
+                    });
+
+                    row.ConstantItem(8);
+
+                    // KPI Margen
+                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
+                        .Background(Colors.Purple.Lighten5).Padding(8).Column(c =>
+                    {
+                        c.Item().Text("MARGEN PROMEDIO").FontSize(7).FontColor(Colors.Grey.Darken1);
+                        c.Item().Text($"{margenGlobal:N1}%").FontSize(16).Bold().FontColor(Colors.Purple.Darken2);
+                    });
+
+                    row.ConstantItem(8);
+
+                    // KPI Productos
+                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
+                        .Background(Colors.Indigo.Lighten5).Padding(8).Column(c =>
+                    {
+                        c.Item().Text("PRODUCTOS VENDIDOS").FontSize(7).FontColor(Colors.Grey.Darken1);
+                        c.Item().Text(productos.Count.ToString()).FontSize(16).Bold().FontColor(Colors.Indigo.Darken2);
+                    });
+                });
+
+                // Advertencia de productos sin costo
+                if (productosSinCosto > 0)
+                {
+                    mainCol.Item().PaddingBottom(10).Background(Colors.Amber.Lighten4).Border(1).BorderColor(Colors.Amber.Darken2)
+                        .Padding(8).Row(row =>
+                    {
+                        row.AutoItem().Text("⚠").FontSize(12);
+                        row.ConstantItem(8);
+                        row.RelativeItem().Text($"{productosSinCosto} producto(s) no tienen costo registrado a esta fecha. Su ganancia se calcula como 100% del ingreso.")
+                            .FontSize(8).FontColor(Colors.Amber.Darken4);
+                    });
+                }
+
+                // SECCION 2: TABLA DE PRODUCTOS
+                mainCol.Item().Column(col =>
+                {
+                    col.Item().Text("DETALLE POR PRODUCTO")
+                        .FontSize(11)
+                        .Bold()
+                        .FontColor(Colors.Green.Darken2);
+                    col.Item().PaddingTop(3).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+
+                    col.Item().PaddingTop(8).Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.ConstantColumn(55);  // Codigo
+                            columns.RelativeColumn(2);   // Nombre
+                            columns.ConstantColumn(70);  // Presentacion
+                            columns.ConstantColumn(45);  // Cantidad
+                            columns.ConstantColumn(50);  // Unidades
+                            columns.ConstantColumn(60);  // Precio Vta
+                            columns.ConstantColumn(55);  // Costo Unit
+                            columns.ConstantColumn(65);  // Costo Total
+                            columns.ConstantColumn(65);  // Ingreso
+                            columns.ConstantColumn(65);  // Ganancia
+                            columns.ConstantColumn(50);  // Margen
+                        });
+
+                        // Header
+                        table.Header(header =>
+                        {
+                            var headerStyle = TextStyle.Default.FontSize(7).Bold();
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4)
+                                .Text("CÓDIGO").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4)
+                                .Text("PRODUCTO").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4)
+                                .Text("PRESENT.").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignCenter()
+                                .Text("CANT.").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignCenter()
+                                .Text("UNID.").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignRight()
+                                .Text("P.VENTA").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignRight()
+                                .Text("COSTO U.").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignRight()
+                                .Text("COSTO T.").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignRight()
+                                .Text("INGRESO").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignRight()
+                                .Text("GANANCIA").Style(headerStyle).FontColor(Colors.White);
+                            header.Cell().Background(Colors.Green.Darken2).Padding(4).AlignRight()
+                                .Text("MARGEN").Style(headerStyle).FontColor(Colors.White);
+                        });
+
+                        bool alternate = false;
+                        foreach (var prod in productos)
+                        {
+                            var bgColor = alternate ? Colors.Grey.Lighten4 : Colors.White;
+                            var gananciaColor = prod.GananciaBruta >= 0 ? Colors.Green.Darken2 : Colors.Red.Darken2;
+                            alternate = !alternate;
+
+                            table.Cell().Background(bgColor).Padding(3).Text(prod.Codigo).FontSize(6);
+                            table.Cell().Background(bgColor).Padding(3).Text(prod.Nombre.Length > 25 ? prod.Nombre.Substring(0, 25) + "..." : prod.Nombre).FontSize(7);
+                            table.Cell().Background(bgColor).Padding(3).Text(prod.Presentacion).FontSize(6);
+                            table.Cell().Background(bgColor).Padding(3).AlignCenter().Text(prod.CantidadVendida.ToString("N0")).FontSize(7);
+                            table.Cell().Background(bgColor).Padding(3).AlignCenter().Text(prod.UnidadesTotales.ToString("N0")).FontSize(7);
+                            table.Cell().Background(bgColor).Padding(3).AlignRight().Text($"${prod.PrecioVenta:N0}").FontSize(7);
+                            table.Cell().Background(bgColor).Padding(3).AlignRight()
+                                .Text(prod.CostoUnitario > 0 ? $"${prod.CostoUnitario:N0}" : "-").FontSize(7)
+                                .FontColor(prod.CostoUnitario > 0 ? Colors.Black : Colors.Grey.Medium);
+                            table.Cell().Background(bgColor).Padding(3).AlignRight().Text($"${prod.CostoTotal:N0}").FontSize(7);
+                            table.Cell().Background(bgColor).Padding(3).AlignRight().Text($"${prod.IngresoTotal:N0}").FontSize(7);
+                            table.Cell().Background(bgColor).Padding(3).AlignRight()
+                                .Text($"${prod.GananciaBruta:N0}").FontSize(7).Bold().FontColor(gananciaColor);
+                            table.Cell().Background(bgColor).Padding(3).AlignRight()
+                                .Text($"{prod.MargenPorcentaje:N1}%").FontSize(7).FontColor(gananciaColor);
+                        }
+
+                        // Fila de totales
+                        table.Cell().ColumnSpan(7).Background(Colors.Green.Lighten4).Padding(5)
+                            .Text("TOTALES").Bold().FontSize(8);
+                        table.Cell().Background(Colors.Green.Lighten4).Padding(5).AlignRight()
+                            .Text($"${totalCostos:N0}").Bold().FontSize(8);
+                        table.Cell().Background(Colors.Green.Lighten4).Padding(5).AlignRight()
+                            .Text($"${totalIngresos:N0}").Bold().FontSize(8);
+                        table.Cell().Background(Colors.Green.Lighten4).Padding(5).AlignRight()
+                            .Text($"${totalGanancias:N0}").Bold().FontSize(8).FontColor(Colors.Green.Darken3);
+                        table.Cell().Background(Colors.Green.Lighten4).Padding(5).AlignRight()
+                            .Text($"{margenGlobal:N1}%").Bold().FontSize(8).FontColor(Colors.Green.Darken3);
+                    });
+                });
+            });
+        }
+
+        /// <summary>
+        /// Clase interna para manejar los datos de ganancia por producto
+        /// </summary>
+        private class GananciaItem
+        {
+            public int IdArticulo { get; set; }
+            public string Codigo { get; set; } = "";
+            public string Nombre { get; set; } = "";
+            public string Presentacion { get; set; } = "";
+            public int UnidadesPorPresentacion { get; set; }
+            public decimal CantidadVendida { get; set; }
+            public decimal UnidadesTotales { get; set; }
+            public decimal PrecioVenta { get; set; }
+            public decimal CostoUnitario { get; set; }
+            public decimal CostoTotal { get; set; }
+            public decimal IngresoTotal { get; set; }
+            public decimal GananciaBruta { get; set; }
+            public decimal MargenPorcentaje { get; set; }
+        }
+
+        #endregion
     }
 
     /// <summary>

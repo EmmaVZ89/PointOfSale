@@ -31,6 +31,7 @@ namespace Capa_Datos.Repositories
         private IVentaRepository _ventas;
         private IVentaDetalleRepository _ventaDetalles;
         private IPresentacionRepository _presentaciones;
+        private IProductoCostoRepository _productoCostos;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -141,6 +142,19 @@ namespace Capa_Datos.Repositories
                 if (_presentaciones == null)
                     _presentaciones = new PresentacionRepository(_context);
                 return _presentaciones;
+            }
+        }
+
+        /// <summary>
+        /// Repositorio de Costos Históricos de Producto
+        /// </summary>
+        public IProductoCostoRepository ProductoCostos
+        {
+            get
+            {
+                if (_productoCostos == null)
+                    _productoCostos = new ProductoCostoRepository(_context);
+                return _productoCostos;
             }
         }
 

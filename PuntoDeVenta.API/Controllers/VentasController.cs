@@ -469,6 +469,169 @@ namespace PuntoDeVenta.API.Controllers
             }
         }
 
+        #region Ganancias (Solo Admin)
+
+        /// <summary>
+        /// Obtiene el reporte de ganancias de un día específico (Admin).
+        /// Calcula ganancia bruta por producto basada en costo de compra vs precio de venta.
+        /// </summary>
+        [HttpGet("ganancias")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<ReporteGananciasDTO>>> GetGanancias([FromQuery] DateTime fecha)
+        {
+            try
+            {
+                // Convertir fecha a UTC para PostgreSQL
+                var fechaDesde = DateTimeHelper.GetArgentinaDayStartUtc(fecha);
+                var fechaHasta = DateTimeHelper.GetArgentinaDayEndUtc(fecha);
+
+                // Obtener ventas no canceladas del día
+                var (ventas, _) = await _unitOfWork.Ventas.GetPaginadoAsync(
+                    idCliente: null,
+                    idUsuario: null,
+                    fechaDesde: fechaDesde,
+                    fechaHasta: fechaHasta,
+                    cancelada: false,
+                    pagina: 1,
+                    tamanioPagina: 10000);
+
+                if (!ventas.Any())
+                {
+                    return Ok(ApiResponse<ReporteGananciasDTO>.Ok(new ReporteGananciasDTO
+                    {
+                        Fecha = fecha,
+                        Productos = new List<GananciaProductoDTO>(),
+                        TotalIngresos = 0,
+                        TotalCostos = 0,
+                        TotalGanancias = 0,
+                        MargenPromedioGlobal = 0,
+                        TotalProductosVendidos = 0,
+                        ProductosSinCosto = 0,
+                        MensajeProductosSinCosto = ""
+                    }, "No hay ventas para la fecha seleccionada"));
+                }
+
+                // Diccionario para agrupar por producto+presentación
+                var gananciasDict = new Dictionary<string, GananciaProductoDTO>();
+                var productosSinCosto = new HashSet<int>();
+
+                // Procesar cada venta
+                foreach (var venta in ventas)
+                {
+                    var detalles = await _unitOfWork.VentaDetalles.GetByVentaConProductoAsync(venta.Id_Venta);
+
+                    foreach (var detalle in detalles)
+                    {
+                        var idArticulo = detalle.Id_Articulo ?? 0;
+                        if (idArticulo == 0) continue;
+
+                        // Obtener producto para el costo
+                        var producto = await _unitOfWork.Productos.GetByIdAsync(idArticulo);
+                        if (producto == null) continue;
+
+                        // Obtener nombre de presentación
+                        string presentacionNombre = "Unidad";
+                        if (detalle.IdPresentacion.HasValue)
+                        {
+                            var presentacion = await _unitOfWork.Presentaciones.GetByIdAsync(detalle.IdPresentacion.Value);
+                            presentacionNombre = presentacion?.Nombre ?? "Unidad";
+                        }
+
+                        // Calcular unidades totales
+                        var unidadesPorPresentacion = detalle.CantidadUnidadesPorPresentacion > 0
+                            ? detalle.CantidadUnidadesPorPresentacion
+                            : 1;
+                        var unidadesTotales = detalle.Cantidad * unidadesPorPresentacion;
+
+                        // Calcular costos e ingresos
+                        var costoUnitario = producto.CostoUnitario ?? 0;
+                        if (!producto.CostoUnitario.HasValue || producto.CostoUnitario == 0)
+                        {
+                            productosSinCosto.Add(idArticulo);
+                        }
+
+                        var costoTotal = unidadesTotales * costoUnitario;
+                        var ingresoTotal = detalle.Monto_Total ?? 0m;
+                        var ganancia = ingresoTotal - costoTotal;
+
+                        // Clave única por producto + presentación
+                        var key = $"{idArticulo}_{detalle.IdPresentacion ?? 0}";
+
+                        if (gananciasDict.ContainsKey(key))
+                        {
+                            var existing = gananciasDict[key];
+                            existing.CantidadVendida += detalle.Cantidad;
+                            existing.UnidadesTotales += unidadesTotales;
+                            existing.CostoTotal += costoTotal;
+                            existing.IngresoTotal += ingresoTotal;
+                            existing.GananciaBruta += ganancia;
+                        }
+                        else
+                        {
+                            gananciasDict[key] = new GananciaProductoDTO
+                            {
+                                IdArticulo = idArticulo,
+                                Codigo = producto.Codigo,
+                                Nombre = producto.Nombre,
+                                Presentacion = presentacionNombre,
+                                UnidadesPorPresentacion = unidadesPorPresentacion,
+                                CantidadVendida = detalle.Cantidad,
+                                UnidadesTotales = unidadesTotales,
+                                PrecioVenta = detalle.Precio_Venta ?? 0,
+                                CostoUnitario = costoUnitario,
+                                CostoTotal = costoTotal,
+                                IngresoTotal = ingresoTotal,
+                                GananciaBruta = ganancia,
+                                MargenPorcentaje = 0 // Se calcula después
+                            };
+                        }
+                    }
+                }
+
+                // Calcular margen porcentaje para cada producto
+                foreach (var item in gananciasDict.Values)
+                {
+                    if (item.CostoTotal > 0)
+                    {
+                        item.MargenPorcentaje = (item.GananciaBruta / item.CostoTotal) * 100;
+                    }
+                    else if (item.IngresoTotal > 0)
+                    {
+                        item.MargenPorcentaje = 100; // Sin costo = 100% margen
+                    }
+                }
+
+                // Calcular totales
+                var totalIngresos = gananciasDict.Values.Sum(g => g.IngresoTotal);
+                var totalCostos = gananciasDict.Values.Sum(g => g.CostoTotal);
+                var totalGanancias = totalIngresos - totalCostos;
+                var margenGlobal = totalCostos > 0 ? (totalGanancias / totalCostos) * 100 : 100;
+
+                var reporte = new ReporteGananciasDTO
+                {
+                    Fecha = fecha,
+                    Productos = gananciasDict.Values.OrderByDescending(g => g.GananciaBruta).ToList(),
+                    TotalIngresos = totalIngresos,
+                    TotalCostos = totalCostos,
+                    TotalGanancias = totalGanancias,
+                    MargenPromedioGlobal = Math.Round(margenGlobal, 2),
+                    TotalProductosVendidos = gananciasDict.Count,
+                    ProductosSinCosto = productosSinCosto.Count,
+                    MensajeProductosSinCosto = productosSinCosto.Count > 0
+                        ? $"{productosSinCosto.Count} producto(s) no tienen costo registrado. Su ganancia se calcula como 100% del ingreso."
+                        : ""
+                };
+
+                return Ok(ApiResponse<ReporteGananciasDTO>.Ok(reporte));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ReporteGananciasDTO>.Error(ex.Message));
+            }
+        }
+
+        #endregion
+
         #region Helpers
 
         /// <summary>

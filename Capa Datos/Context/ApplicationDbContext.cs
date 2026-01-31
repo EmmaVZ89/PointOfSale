@@ -20,6 +20,7 @@ namespace Capa_Datos.Context
         public DbSet<CE_Ventas> Ventas { get; set; }
         public DbSet<CE_VentaDetalle> VentaDetalles { get; set; }
         public DbSet<CE_ProductoPresentacion> ProductoPresentaciones { get; set; }
+        public DbSet<CE_ProductoCostoHistorico> ProductoCostosHistorico { get; set; }
 
         #endregion
 
@@ -97,6 +98,7 @@ namespace Capa_Datos.Context
                 entity.Property(e => e.UnidadMedida).HasColumnName("UnidadMedida");
                 entity.Property(e => e.Img).HasColumnName("Img");
                 entity.Property(e => e.Descripcion).HasColumnName("Descripcion");
+                entity.Property(e => e.CostoUnitario).HasColumnName("CostoUnitario");
             });
 
             // ============================================
@@ -216,6 +218,20 @@ namespace Capa_Datos.Context
 
                 // Propiedad de navegacion (no en BD)
                 entity.Ignore(e => e.Producto);
+            });
+
+            // ============================================
+            // CE_ProductoCostoHistorico -> "ProductoCostosHistorico"
+            // ============================================
+            modelBuilder.Entity<CE_ProductoCostoHistorico>(entity =>
+            {
+                entity.ToTable("ProductoCostosHistorico");
+                entity.HasKey(e => e.IdCostoHistorico);
+                entity.Property(e => e.IdCostoHistorico).HasColumnName("IdCostoHistorico");
+                entity.Property(e => e.IdArticulo).HasColumnName("IdArticulo");
+                entity.Property(e => e.CostoUnitario).HasColumnName("CostoUnitario");
+                entity.Property(e => e.FechaRegistro).HasColumnName("FechaRegistro");
+                entity.Property(e => e.IdUsuarioRegistro).HasColumnName("IdUsuarioRegistro");
             });
         }
 

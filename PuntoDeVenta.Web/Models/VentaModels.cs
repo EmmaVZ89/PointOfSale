@@ -97,4 +97,40 @@ namespace PuntoDeVenta.Web.Models
         public decimal CantidadVendida { get; set; }
         public decimal TotalIngresos { get; set; }
     }
+
+    /// <summary>
+    /// DTO para detalle de ganancia por producto (solo Admin)
+    /// </summary>
+    public class GananciaProductoDTO
+    {
+        public int IdArticulo { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Presentacion { get; set; } = string.Empty;
+        public int UnidadesPorPresentacion { get; set; }
+        public decimal CantidadVendida { get; set; }
+        public decimal UnidadesTotales { get; set; }
+        public decimal PrecioVenta { get; set; }
+        public decimal CostoUnitario { get; set; }
+        public decimal CostoTotal { get; set; }
+        public decimal IngresoTotal { get; set; }
+        public decimal GananciaBruta { get; set; }
+        public decimal MargenPorcentaje { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para reporte de ganancias del día (solo Admin)
+    /// </summary>
+    public class ReporteGananciasDTO
+    {
+        public DateTime Fecha { get; set; }
+        public List<GananciaProductoDTO> Productos { get; set; } = new();
+        public decimal TotalIngresos { get; set; }
+        public decimal TotalCostos { get; set; }
+        public decimal TotalGanancias { get; set; }
+        public decimal MargenPromedioGlobal { get; set; }
+        public int TotalProductosVendidos { get; set; }
+        public int ProductosSinCosto { get; set; }
+        public string MensajeProductosSinCosto { get; set; } = string.Empty;
+    }
 }

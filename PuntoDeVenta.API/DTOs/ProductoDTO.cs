@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace PuntoDeVenta.API.DTOs
@@ -22,6 +24,18 @@ namespace PuntoDeVenta.API.DTOs
         /// Cantidad de presentaciones activas del producto
         /// </summary>
         public int CantidadPresentaciones { get; set; }
+
+        /// <summary>
+        /// Costo de compra unitario (solo visible para Admin)
+        /// </summary>
+        public decimal? CostoUnitario { get; set; }
+
+        /// <summary>
+        /// Margen de ganancia porcentual (solo visible para Admin)
+        /// </summary>
+        public decimal? MargenGanancia => CostoUnitario.HasValue && CostoUnitario > 0
+            ? ((Precio - CostoUnitario.Value) / CostoUnitario.Value) * 100
+            : null;
     }
 
     /// <summary>
@@ -80,6 +94,12 @@ namespace PuntoDeVenta.API.DTOs
 
         [StringLength(500)]
         public string Descripcion { get; set; }
+
+        /// <summary>
+        /// Costo de compra unitario (solo Admin puede modificar)
+        /// </summary>
+        [Range(0, double.MaxValue)]
+        public decimal? CostoUnitario { get; set; }
     }
 
     /// <summary>
@@ -103,5 +123,64 @@ namespace PuntoDeVenta.API.DTOs
     {
         [Required]
         public bool Activo { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para actualizar costo de compra unitario (solo Admin)
+    /// </summary>
+    public class ActualizarCostoDTO
+    {
+        [Required(ErrorMessage = "El costo unitario es requerido")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El costo debe ser mayor a 0")]
+        public decimal CostoUnitario { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para el histórico de costos (solo Admin)
+    /// </summary>
+    public class CostoHistoricoDTO
+    {
+        public int IdCostoHistorico { get; set; }
+        public int IdArticulo { get; set; }
+        public decimal CostoUnitario { get; set; }
+        public DateTime FechaRegistro { get; set; }
+        public int? IdUsuarioRegistro { get; set; }
+        public string NombreUsuario { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para detalle de ganancia por producto (solo Admin)
+    /// </summary>
+    public class GananciaProductoDTO
+    {
+        public int IdArticulo { get; set; }
+        public string Codigo { get; set; }
+        public string Nombre { get; set; }
+        public string Presentacion { get; set; }
+        public int UnidadesPorPresentacion { get; set; }
+        public decimal CantidadVendida { get; set; }
+        public decimal UnidadesTotales { get; set; }
+        public decimal PrecioVenta { get; set; }
+        public decimal CostoUnitario { get; set; }
+        public decimal CostoTotal { get; set; }
+        public decimal IngresoTotal { get; set; }
+        public decimal GananciaBruta { get; set; }
+        public decimal MargenPorcentaje { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para reporte de ganancias del día (solo Admin)
+    /// </summary>
+    public class ReporteGananciasDTO
+    {
+        public DateTime Fecha { get; set; }
+        public List<GananciaProductoDTO> Productos { get; set; } = new();
+        public decimal TotalIngresos { get; set; }
+        public decimal TotalCostos { get; set; }
+        public decimal TotalGanancias { get; set; }
+        public decimal MargenPromedioGlobal { get; set; }
+        public int TotalProductosVendidos { get; set; }
+        public int ProductosSinCosto { get; set; }
+        public string MensajeProductosSinCosto { get; set; }
     }
 }

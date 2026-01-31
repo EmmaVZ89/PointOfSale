@@ -11,6 +11,8 @@ namespace PuntoDeVenta.Web.Services
         Task<ApiResponse<List<TopProductoVentaDTO>>> GetTopProductosAsync(DateTime desde, DateTime hasta, int top = 10);
         Task<byte[]?> GetTicketPdfAsync(int idVenta);
         Task<byte[]?> GetReporteCajaPdfAsync(DateTime fecha);
+        Task<ApiResponse<ReporteGananciasDTO>> GetGananciasAsync(DateTime fecha);
+        Task<byte[]?> GetGananciasPdfAsync(DateTime fecha);
     }
 
     public class VentaService : ApiServiceBase, IVentaService
@@ -75,6 +77,26 @@ namespace PuntoDeVenta.Web.Services
             try
             {
                 var response = await _httpClient.GetAsync($"api/recibo/caja/{fecha:yyyy-MM-dd}");
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadAsByteArrayAsync();
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<ApiResponse<ReporteGananciasDTO>> GetGananciasAsync(DateTime fecha)
+            => await GetAsync<ReporteGananciasDTO>($"api/ventas/ganancias?fecha={fecha:yyyy-MM-dd}");
+
+        public async Task<byte[]?> GetGananciasPdfAsync(DateTime fecha)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/recibo/ganancias/{fecha:yyyy-MM-dd}");
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadAsByteArrayAsync();

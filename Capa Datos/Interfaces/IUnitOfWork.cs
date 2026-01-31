@@ -64,6 +64,11 @@ namespace Capa_Datos.Interfaces
         /// </summary>
         IPresentacionRepository Presentaciones { get; }
 
+        /// <summary>
+        /// Repositorio de Costos Históricos de Producto
+        /// </summary>
+        IProductoCostoRepository ProductoCostos { get; }
+
         #endregion
 
         #region Transacciones

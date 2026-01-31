@@ -20,9 +20,21 @@ namespace PuntoDeVenta.Web.Models
         /// </summary>
         public int CantidadPresentaciones { get; set; }
 
+        /// <summary>
+        /// Costo de compra unitario (solo visible para Admin)
+        /// </summary>
+        public decimal? CostoUnitario { get; set; }
+
+        /// <summary>
+        /// Margen de ganancia porcentual (calculado)
+        /// </summary>
+        public decimal? MargenGanancia => CostoUnitario.HasValue && CostoUnitario > 0
+            ? ((Precio - CostoUnitario.Value) / CostoUnitario.Value) * 100
+            : null;
+
         // Propiedades calculadas para compatibilidad con reportes de inventario
         public decimal StockMinimo => 5; // Valor por defecto si no existe en BD
-        public decimal PrecioCompra => Precio * 0.7m; // Estimado como 70% del precio de venta
+        public decimal PrecioCompra => CostoUnitario ?? Precio * 0.7m; // Usar costo real o estimado
         public decimal PrecioVenta => Precio;
     }
 
@@ -76,5 +88,11 @@ namespace PuntoDeVenta.Web.Models
 
         [StringLength(500)]
         public string? Descripcion { get; set; }
+
+        /// <summary>
+        /// Costo de compra unitario (solo Admin puede modificar)
+        /// </summary>
+        [Range(0, double.MaxValue, ErrorMessage = "El costo no puede ser negativo")]
+        public decimal? CostoUnitario { get; set; }
     }
 }
