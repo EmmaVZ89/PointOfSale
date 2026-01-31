@@ -1,6 +1,7 @@
 # =========================================
 # Dockerfile para PuntoDeVenta.Web
 # Blazor WASM + nginx para hosting estatico
+# Build context: PuntoDeVenta.Web/
 # =========================================
 
 # Stage 1: Build
@@ -8,16 +9,15 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copiar archivos de proyecto
-COPY ["PuntoDeVenta.Web/PuntoDeVenta.Web.csproj", "PuntoDeVenta.Web/"]
+COPY ["PuntoDeVenta.Web.csproj", "./"]
 
 # Restaurar dependencias
-RUN dotnet restore "PuntoDeVenta.Web/PuntoDeVenta.Web.csproj"
+RUN dotnet restore "PuntoDeVenta.Web.csproj"
 
 # Copiar todo el codigo fuente
 COPY . .
 
 # Build en modo Release
-WORKDIR "/src/PuntoDeVenta.Web"
 RUN dotnet build "PuntoDeVenta.Web.csproj" -c Release -o /app/build
 
 # Stage 2: Publish
@@ -31,7 +31,7 @@ RUN cp /app/publish/wwwroot/appsettings.Production.json /app/publish/wwwroot/app
 FROM nginx:alpine AS final
 
 # Copiar configuracion nginx con security headers
-COPY PuntoDeVenta.Web/nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copiar archivos publicados de Blazor WASM
 COPY --from=publish /app/publish/wwwroot /usr/share/nginx/html
