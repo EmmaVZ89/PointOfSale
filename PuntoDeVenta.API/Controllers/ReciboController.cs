@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -28,7 +27,6 @@ namespace PuntoDeVenta.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<ReciboController> _logger;
 
         // Datos del negocio/vendedor (configurables via appsettings.json)
         private string NombreNegocio => _configuration["Negocio:Nombre"] ?? "Distribuidora LA FAMILIA";
@@ -60,11 +58,10 @@ namespace PuntoDeVenta.API.Controllers
             return _logoBytes;
         }
 
-        public ReciboController(IUnitOfWork unitOfWork, IConfiguration configuration, ILogger<ReciboController> logger)
+        public ReciboController(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
-            _logger = logger;
             // Configurar licencia de QuestPDF (Community = gratis para uso comercial)
             QuestPDF.Settings.License = LicenseType.Community;
         }
@@ -77,28 +74,16 @@ namespace PuntoDeVenta.API.Controllers
         {
             try
             {
-                _logger.LogInformation("[RECIBO DEBUG] GenerarRecibo llamado con idVenta: {IdVenta}", idVenta);
-
                 // Obtener la venta
                 var venta = await _unitOfWork.Ventas.GetByIdAsync(idVenta);
                 if (venta == null)
                 {
-                    _logger.LogWarning("[RECIBO DEBUG] Venta no encontrada para idVenta: {IdVenta}", idVenta);
                     return NotFound(ApiResponse<object>.Error("Venta no encontrada"));
                 }
-                _logger.LogInformation("[RECIBO DEBUG] Venta encontrada: No_Factura={NoFactura}, Monto={Monto}", venta.No_Factura, venta.Monto_Total);
 
                 // Obtener detalles
                 var detalles = await _unitOfWork.VentaDetalles.GetByVentaConProductoAsync(idVenta);
                 var detallesList = detalles.ToList();
-                _logger.LogInformation("[RECIBO DEBUG] Detalles obtenidos: {Count} registros", detallesList.Count);
-
-                // Log detallado de cada item
-                foreach (var det in detallesList)
-                {
-                    _logger.LogInformation("[RECIBO DEBUG] Detalle: Id_Detalle={IdDetalle}, Id_Venta={IdVenta}, Id_Articulo={IdArticulo}, Cantidad={Cantidad}, Precio={Precio}, Monto={Monto}, Nombre={Nombre}",
-                        det.Id_Detalle, det.Id_Venta, det.Id_Articulo, det.Cantidad, det.Precio_Venta, det.Monto_Total, det.NombreProducto ?? "NULL");
-                }
 
                 // Cargar nombres de presentacion para cada detalle
                 foreach (var detalle in detallesList)
@@ -135,8 +120,6 @@ namespace PuntoDeVenta.API.Controllers
                         vendedor = $"{usuario.Nombre} {usuario.Apellido}".Trim();
                     }
                 }
-
-                _logger.LogInformation("[RECIBO DEBUG] Llamando a GenerarPdfPresupuesto con {Count} detalles", detallesList.Count);
 
                 // Generar PDF
                 var pdfBytes = GenerarPdfPresupuesto(
@@ -459,14 +442,6 @@ namespace PuntoDeVenta.API.Controllers
                     });
 
                 col.Item().PaddingTop(20);
-
-                // DEBUG: Mostrar información de diagnóstico
-                col.Item().Text($"[DEBUG] IdVenta: {noDocumento}").FontSize(8).FontColor(Colors.Red.Medium);
-                col.Item().Text($"[DEBUG] Detalles encontrados: {detalles.Count}").FontSize(8).FontColor(Colors.Red.Medium);
-                if (detalles.Count > 0)
-                {
-                    col.Item().Text($"[DEBUG] Primer detalle - IdArticulo: {detalles[0].Id_Articulo}, Nombre: {detalles[0].NombreProducto ?? "NULL"}, Cantidad: {detalles[0].Cantidad}").FontSize(7).FontColor(Colors.Red.Medium);
-                }
 
                 // Tabla de productos (formato legacy)
                 col.Item().Table(table =>
@@ -1033,67 +1008,6 @@ namespace PuntoDeVenta.API.Controllers
                         .FontColor(Colors.Grey.Darken1);
                 });
             });
-        }
-
-        #endregion
-
-        #region Debug Endpoints (TEMPORAL - ELIMINAR EN PRODUCCION)
-
-        /// <summary>
-        /// Endpoint de diagnóstico para verificar acceso a Ventas_Detalle.
-        /// ELIMINAR DESPUES DE RESOLVER EL PROBLEMA.
-        /// </summary>
-        [HttpGet("debug/detalles/{idVenta}")]
-        public async Task<IActionResult> DebugDetalles(int idVenta)
-        {
-            try
-            {
-                // 1. Contar todos los registros en la tabla
-                var totalCount = await _unitOfWork.VentaDetalles.CountAsync();
-
-                // 2. Obtener detalles para el idVenta específico
-                var detalles = await _unitOfWork.VentaDetalles.GetByVentaAsync(idVenta);
-                var detallesList = detalles.ToList();
-
-                // 3. Obtener algunos registros de muestra (primeros 5)
-                var muestra = await _unitOfWork.VentaDetalles.GetAllAsync();
-                var muestraList = muestra.Take(5).Select(d => new
-                {
-                    d.Id_Detalle,
-                    d.Id_Venta,
-                    d.Id_Articulo,
-                    d.Cantidad,
-                    d.Precio_Venta,
-                    d.Monto_Total
-                }).ToList();
-
-                return Ok(new
-                {
-                    mensaje = "Diagnóstico de Ventas_Detalle",
-                    totalRegistrosEnTabla = totalCount,
-                    idVentaBuscado = idVenta,
-                    detallesEncontrados = detallesList.Count,
-                    detalles = detallesList.Select(d => new
-                    {
-                        d.Id_Detalle,
-                        d.Id_Venta,
-                        d.Id_Articulo,
-                        d.Cantidad,
-                        d.Precio_Venta,
-                        d.Monto_Total
-                    }),
-                    muestraPrimeros5 = muestraList
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    error = ex.Message,
-                    stackTrace = ex.StackTrace,
-                    innerException = ex.InnerException?.Message
-                });
-            }
         }
 
         #endregion

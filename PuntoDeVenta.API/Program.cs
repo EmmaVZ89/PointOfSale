@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -350,93 +349,6 @@ try
                 })
             };
             await context.Response.WriteAsJsonAsync(response);
-        }
-    });
-
-    // ============================================
-    // DEBUG ENDPOINT - ELIMINAR DESPUES DE RESOLVER
-    // ============================================
-    app.MapGet("/debug/db-test", async (Capa_Datos.Context.ApplicationDbContext db) =>
-    {
-        try
-        {
-            var ventasCount = await db.Ventas.CountAsync();
-            var detallesCount = await db.VentaDetalles.CountAsync();
-
-            // Obtener algunos detalles de muestra
-            var muestraDetalles = await db.VentaDetalles
-                .AsNoTracking()
-                .Take(5)
-                .Select(d => new { d.Id_Detalle, d.Id_Venta, d.Id_Articulo, d.Cantidad })
-                .ToListAsync();
-
-            // Buscar detalles para venta específica
-            var detallesVenta2 = await db.VentaDetalles
-                .AsNoTracking()
-                .Where(d => d.Id_Venta == 2)
-                .Select(d => new { d.Id_Detalle, d.Id_Venta, d.Id_Articulo, d.Cantidad })
-                .ToListAsync();
-
-            return Results.Ok(new
-            {
-                conexion = "OK",
-                ventas_total = ventasCount,
-                detalles_total = detallesCount,
-                muestra_5_detalles = muestraDetalles,
-                detalles_venta_2 = detallesVenta2
-            });
-        }
-        catch (Exception ex)
-        {
-            return Results.Ok(new
-            {
-                conexion = "ERROR",
-                mensaje = ex.Message,
-                inner = ex.InnerException?.Message,
-                stack = ex.StackTrace
-            });
-        }
-    });
-
-    // DEBUG: Probar con UnitOfWork (mismo flujo que ReciboController)
-    app.MapGet("/debug/uow-test/{idVenta}", async (int idVenta, Capa_Datos.Interfaces.IUnitOfWork uow) =>
-    {
-        try
-        {
-            // Exactamente como lo hace ReciboController
-            var venta = await uow.Ventas.GetByIdAsync(idVenta);
-            var detalles = await uow.VentaDetalles.GetByVentaConProductoAsync(idVenta);
-            var detallesList = detalles.ToList();
-
-            return Results.Ok(new
-            {
-                idVentaBuscado = idVenta,
-                ventaEncontrada = venta != null,
-                ventaNoFactura = venta?.No_Factura,
-                ventaMontoTotal = venta?.Monto_Total,
-                detallesCount = detallesList.Count,
-                detalles = detallesList.Select(d => new
-                {
-                    d.Id_Detalle,
-                    d.Id_Venta,
-                    d.Id_Articulo,
-                    d.Cantidad,
-                    d.Precio_Venta,
-                    d.Monto_Total,
-                    d.NombreProducto,
-                    d.CodigoProducto
-                })
-            });
-        }
-        catch (Exception ex)
-        {
-            return Results.Ok(new
-            {
-                error = true,
-                mensaje = ex.Message,
-                inner = ex.InnerException?.Message,
-                stack = ex.StackTrace
-            });
         }
     });
 
