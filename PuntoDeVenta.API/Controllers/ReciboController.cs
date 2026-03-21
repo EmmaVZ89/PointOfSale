@@ -31,7 +31,7 @@ namespace PuntoDeVenta.API.Controllers
         // Datos del negocio/vendedor (configurables via appsettings.json)
         private string NombreNegocio => _configuration["Negocio:Nombre"] ?? "Distribuidora LA FAMILIA";
         private string DomicilioNegocio => _configuration["Negocio:Domicilio"] ?? "Coronel Terrada 4840 - Isidro Casanova";
-        private string TelefonoNegocio => _configuration["Negocio:Telefono"] ?? "1125594005";
+        private string TelefonoNegocio => _configuration["Negocio:Telefono"] ?? "1124594005";
         private string InstagramNegocio => _configuration["Negocio:Instagram"] ?? "@lafamiliabebidas.bsas";
         private string CuitNegocio => _configuration["Negocio:CUIT"] ?? "";
 

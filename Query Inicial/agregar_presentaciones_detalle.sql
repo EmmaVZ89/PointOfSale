@@ -1,22 +1,3 @@
--- Script para agregar campos de presentacion a la tabla Ventas_Detalle
--- Requerido para el sistema Web (soporte de presentaciones)
--- Fecha: 2026-01-29
-
--- Agregar columna IdPresentacion (referencia a ProductoPresentaciones)
--- Por defecto NULL para compatibilidad con ventas legacy WPF
-ALTER TABLE "Ventas_Detalle"
-ADD COLUMN IF NOT EXISTS "IdPresentacion" INTEGER DEFAULT NULL;
-
--- Agregar columna CantidadUnidadesPorPresentacion
--- Por defecto 1 para compatibilidad con ventas legacy WPF (unidad simple)
-ALTER TABLE "Ventas_Detalle"
-ADD COLUMN IF NOT EXISTS "CantidadUnidadesPorPresentacion" INTEGER DEFAULT 1;
-
--- Comentarios para documentacion
-COMMENT ON COLUMN "Ventas_Detalle"."IdPresentacion" IS 'ID de la presentacion vendida (nullable para WPF legacy)';
-COMMENT ON COLUMN "Ventas_Detalle"."CantidadUnidadesPorPresentacion" IS 'Unidades por presentacion (1=unidad, 6=pack x6, etc)';
-
--- Actualizar registros existentes para que tengan CantidadUnidadesPorPresentacion = 1
-UPDATE "Ventas_Detalle"
-SET "CantidadUnidadesPorPresentacion" = 1
-WHERE "CantidadUnidadesPorPresentacion" IS NULL;
+Quiero agregar una mejora en el sistema, en el ABM Producto se debe agregar un campo que se llame "Costo de compra unitario". En este campo se va registrar el costo del producto unitariamente. Creo que se deberia de crear una tabla historica de precios costos unitario por producto con fecha, en el ABM siempre se debe cargar el ultimo precio unitario registrado, si este no cambia no se debe registrar en la tabla de historicos. Se debe manejar los casos en que el producto no tiene el costo historico en la tabla, dado que esto es una mejora y los productos ya cargados no van a tener costo unitario.
+Con este dato se busca que en el Menu Caja haya un boton "Descargar ganancias" el cual debe sacar las ganancias del dia que este en el filtro (como Descargar producto), debe hacer las cuentas de lo que se gano por producto teniendo en cuenta la presentacion, toda informacion util para que el usuario entienda es bienvenida, se debe poner totales, el costo de cada producto se debe tomar de la tabla historica de precios por producto, el ultimo costo registrado de cada producto. Toda la funcionalidad de costo debe ser exclusiva para administradores, tando en ABM Producto (no se debe ver el campo) como en Caja.
+Crea plan para implementarlo y luego ejecuta este plan, creame los .sql para modificar la base de datos.
