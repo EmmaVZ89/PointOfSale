@@ -296,15 +296,15 @@ try
     }
 
     // ============================================
-    // RATE LIMITING (OWASP A04, A07)
-    // ============================================
-    app.UseRateLimiter();
-
-    // ============================================
-    // CORS
+    // CORS (debe ir antes de Rate Limiting para que preflight OPTIONS funcione)
     // ============================================
     var corsPolicy = app.Environment.IsDevelopment() ? "Development" : "Production";
     app.UseCors(corsPolicy);
+
+    // ============================================
+    // RATE LIMITING (OWASP A04, A07)
+    // ============================================
+    app.UseRateLimiter();
 
     // ============================================
     // SERILOG REQUEST LOGGING
