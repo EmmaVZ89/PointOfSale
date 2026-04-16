@@ -59,6 +59,11 @@ EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
+# Optimizacion de memoria para Railway (reduce ~60% de RAM)
+ENV DOTNET_gcServer=0
+ENV DOTNET_GCHeapHardLimit=0x6400000
+ENV DOTNET_GCConserveMemory=9
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
